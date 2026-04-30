@@ -50,7 +50,7 @@ The original Claude Code for VS Code extension lacks native RTL support. This of
 |---|---|
 | ▶️ Activate RTL | Injects CSS and a toggle button into the Claude Code chat |
 | 📌 Activate RTL (Always) | Permanently enables RTL without a toggle button |
-| 👁️ Activate RTL (Auto) | Auto-detects Hebrew/Arabic/Persian per bubble and sets direction |
+| 👁️ Activate RTL (Auto) | Auto-detects Hebrew/Arabic/Persian per bubble and sets direction **(Recommended)** |
 | 🔧 Fix BiDi | Activates RTL and fixes reversed text (e.g. "םולש" → "שלום") |
 | ⏹️ Deactivate RTL | Restores original files from backup |
 | 🔍 Check Status | Shows which installations have RTL enabled |
@@ -122,7 +122,7 @@ After installation, a status bar item appears at the bottom of VS Code:
 |---|---|
 | `RTL: Active` ✅ | RTL is injected with toggle button |
 | `RTL: Always` 📌 | RTL is permanently on (no toggle needed) |
-| `RTL: Auto` 👁️ | RTL auto-detects per bubble |
+| `RTL: Auto` 👁️ | RTL auto-detects per bubble **(Recommended)** |
 | `RTL: Inactive` ⭕ | RTL is not installed |
 | `RTL: N/A` ❌ | Claude Code for VS Code extension not found |
 
@@ -136,7 +136,7 @@ Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS) and search for:
 |---|---|
 | `Claude RTL: Activate RTL` | ▶️ Enable RTL support with toggle button |
 | `Claude RTL: Activate RTL (Always)` | 📌 Enable RTL permanently without toggle button |
-| `Claude RTL: Activate RTL (Auto)` | 👁️ Auto-detect RTL per bubble |
+| `Claude RTL: Activate RTL (Auto)` | 👁️ Auto-detect RTL per bubble **(Recommended)** |
 | `Claude RTL: Fix BiDi` | 🔧 Activate RTL + fix bidirectional text issues |
 | `Claude RTL: Deactivate RTL` | ⏹️ Disable RTL and restore original files |
 | `Claude RTL: Check Status` | 🔍 View installation status |
@@ -268,7 +268,7 @@ MIT — see [LICENSE](LICENSE) for details.
 |---|---|
 | ▶️ הפעלת RTL | מזריק עיצוב CSS וכפתור מתג לממשק הצ'אט |
 | 📌 הפעלת RTL (תמיד) | מפעיל RTL לצמיתות ללא כפתור מתג |
-| 👁️ הפעלת RTL (אוטו) | מזהה אוטומטית עברית/ערבית/פרסית לכל בועה וקובע כיוון |
+| 👁️ הפעלת RTL (אוטו) | מזהה אוטומטית עברית/ערבית/פרסית לכל בועה וקובע כיוון **(מומלץ)** |
 | 🔧 תיקון BiDi | מפעיל RTL ומתקן טקסט הפוך (למשל "םולש" → "שלום") |
 | ⏹️ כיבוי RTL | משחזר קבצים מקוריים מגיבוי |
 | 🔍 בדיקת סטטוס | מציג אילו התקנות פועלות עם RTL |
@@ -340,7 +340,7 @@ MIT — see [LICENSE](LICENSE) for details.
 |---|---|
 | `RTL: Active` ✅ | RTL מופעל עם כפתור מתג |
 | `RTL: Always` 📌 | RTL פעיל תמיד (ללא כפתור) |
-| `RTL: Auto` 👁️ | RTL מזהה אוטומטית לכל בועה |
+| `RTL: Auto` 👁️ | RTL מזהה אוטומטית לכל בועה **(מומלץ)** |
 | `RTL: Inactive` ⭕ | RTL לא מותקן |
 | `RTL: N/A` ❌ | התוסף לא נמצא |
 
@@ -354,7 +354,7 @@ MIT — see [LICENSE](LICENSE) for details.
 |---|---|
 | `Claude RTL: Activate RTL` | ▶️ הפעלת תמיכת RTL עם כפתור מתג |
 | `Claude RTL: Activate RTL (Always)` | 📌 הפעלת RTL לצמיתות ללא כפתור מתג |
-| `Claude RTL: Activate RTL (Auto)` | 👁️ זיהוי אוטומטי של RTL לכל בועה |
+| `Claude RTL: Activate RTL (Auto)` | 👁️ זיהוי אוטומטי של RTL לכל בועה **(מומלץ)** |
 | `Claude RTL: Fix BiDi` | 🔧 הפעלת RTL + תיקון בעיות טקסט דו-כיווני |
 | `Claude RTL: Deactivate RTL` | ⏹️ כיבוי ושחזור קבצים מקוריים |
 | `Claude RTL: Check Status` | 🔍 הצגת מצב ההתקנה |
@@ -488,7 +488,7 @@ MIT — ראה קובץ [LICENSE](LICENSE) לפרטים.
 |---|---|
 | ▶️ تفعيل RTL | تحقن تنسيقات CSS وزر تبديل في واجهة المحادثة |
 | 📌 تفعيل RTL (دائم) | تفعيل RTL بشكل دائم بدون زر تبديل |
-| 👁️ تفعيل RTL (تلقائي) | كشف تلقائي للعربية/العبرية/الفارسية لكل فقاعة وتحديد الاتجاه |
+| 👁️ تفعيل RTL (تلقائي) | كشف تلقائي للعربية/العبرية/الفارسية لكل فقاعة وتحديد الاتجاه **(موصى به)** |
 | 🔧 إصلاح BiDi | تفعيل RTL وإصلاح النص المعكوس (مثل "ملاس" → "سلام") |
 | ⏹️ إيقاف RTL | تستعيد الملفات الأصلية من النسخ الاحتياطية |
 | 🔍 فحص الحالة | يعرض التثبيتات التي تعمل بـ RTL |
@@ -560,7 +560,7 @@ MIT — ראה קובץ [LICENSE](LICENSE) לפרטים.
 |---|---|
 | `RTL: Active` ✅ | RTL مفعّل مع زر تبديل |
 | `RTL: Always` 📌 | RTL نشط دائمًا (بدون زر) |
-| `RTL: Auto` 👁️ | RTL يكتشف تلقائيًا لكل فقاعة |
+| `RTL: Auto` 👁️ | RTL يكتشف تلقائيًا لكل فقاعة **(موصى به)** |
 | `RTL: Inactive` ⭕ | RTL غير مثبت |
 | `RTL: N/A` ❌ | الإضافة غير موجودة |
 
@@ -574,7 +574,7 @@ MIT — ראה קובץ [LICENSE](LICENSE) לפרטים.
 |---|---|
 | `Claude RTL: Activate RTL` | ▶️ تفعيل دعم RTL مع زر تبديل |
 | `Claude RTL: Activate RTL (Always)` | 📌 تفعيل RTL بشكل دائم بدون زر تبديل |
-| `Claude RTL: Activate RTL (Auto)` | 👁️ كشف تلقائي لـ RTL لكل فقاعة |
+| `Claude RTL: Activate RTL (Auto)` | 👁️ كشف تلقائي لـ RTL لكل فقاعة **(موصى به)** |
 | `Claude RTL: Fix BiDi` | 🔧 تفعيل RTL + إصلاح مشاكل النص ثنائي الاتجاه |
 | `Claude RTL: Deactivate RTL` | ⏹️ إيقاف الدعم واستعادة الملفات الأصلية |
 | `Claude RTL: Check Status` | 🔍 عرض حالة التثبيت |
@@ -708,7 +708,7 @@ MIT — انظر ملف [LICENSE](LICENSE) للتفاصيل.
 |---|---|
 | ▶️ فعال‌سازی RTL | CSS و یک دکمه تغییر را به رابط چت تزریق می‌کند |
 | 📌 فعال‌سازی RTL (همیشه) | فعال‌سازی دائمی RTL بدون دکمه تغییر |
-| 👁️ فعال‌سازی RTL (خودکار) | شناسایی خودکار فارسی/عربی/عبری در هر حباب و تعیین جهت |
+| 👁️ فعال‌سازی RTL (خودکار) | شناسایی خودکار فارسی/عربی/عبری در هر حباب و تعیین جهت **(پیشنهادی)** |
 | 🔧 رفع BiDi | فعال‌سازی RTL و رفع متن معکوس (مثلاً "ملاس" → "سلام") |
 | ⏹️ غیرفعال‌سازی RTL | فایل‌های اصلی را از نسخه پشتیبان بازیابی می‌کند |
 | 🔍 بررسی وضعیت | نشان می‌دهد کدام نصب‌ها RTL فعال دارند |
@@ -780,7 +780,7 @@ MIT — انظر ملف [LICENSE](LICENSE) للتفاصيل.
 |---|---|
 | `RTL: Active` ✅ | RTL فعال با دکمه تغییر |
 | `RTL: Always` 📌 | RTL همیشه فعال (بدون دکمه) |
-| `RTL: Auto` 👁️ | RTL به‌طور خودکار برای هر حباب شناسایی می‌شود |
+| `RTL: Auto` 👁️ | RTL به‌طور خودکار برای هر حباب شناسایی می‌شود **(پیشنهادی)** |
 | `RTL: Inactive` ⭕ | RTL نصب نشده است |
 | `RTL: N/A` ❌ | افزونه پیدا نشد |
 
@@ -794,7 +794,7 @@ MIT — انظر ملف [LICENSE](LICENSE) للتفاصيل.
 |---|---|
 | `Claude RTL: Activate RTL` | ▶️ فعال‌سازی پشتیبانی RTL با دکمه تغییر |
 | `Claude RTL: Activate RTL (Always)` | 📌 فعال‌سازی دائمی RTL بدون دکمه تغییر |
-| `Claude RTL: Activate RTL (Auto)` | 👁️ شناسایی خودکار RTL برای هر حباب |
+| `Claude RTL: Activate RTL (Auto)` | 👁️ شناسایی خودکار RTL برای هر حباب **(پیشنهادی)** |
 | `Claude RTL: Fix BiDi` | 🔧 فعال‌سازی RTL + رفع مشکلات متن دوجهته |
 | `Claude RTL: Deactivate RTL` | ⏹️ غیرفعال‌سازی و بازیابی فایل‌های اصلی |
 | `Claude RTL: Check Status` | 🔍 نمایش وضعیت نصب |
