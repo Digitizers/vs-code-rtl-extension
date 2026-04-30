@@ -59,12 +59,18 @@ The original Claude Code for VS Code extension lacks native RTL support. This of
 
 ---
 
-### 🆕 What's New (v0.3.7)
+### 🆕 What's New (v0.3.8)
 
-- **Antigravity IDE support** — The extension now detects and supports Antigravity alongside VS Code and Cursor.
+- **Smart Permission RTL (Auto mode)** — In Auto mode, permission requests and follow-up questions now detect RTL direction per element. Questions and options in Hebrew, Arabic, or Persian flow right-to-left; English ones stay left-to-right.
+
+> 💡 **Recommended:** Use **Auto mode** (`Claude RTL: Activate RTL (Auto)`) for the best experience — each element gets the right direction automatically, including permission dialogs.
 
 <details>
 <summary><strong>Previous versions</strong></summary>
+
+#### v0.3.7
+
+- **Antigravity IDE support** — The extension now detects and supports Antigravity alongside VS Code and Cursor.
 
 #### v0.3.6
 
@@ -271,12 +277,18 @@ MIT — see [LICENSE](LICENSE) for details.
 
 ---
 
-### 🆕 מה חדש (v0.3.7)
+### 🆕 מה חדש (v0.3.8)
 
-- **תמיכה ב-Antigravity IDE** — התוסף מזהה ותומך כעת ב-Antigravity לצד VS Code ו-Cursor.
+- **RTL חכם בשאלות הרשאה (מצב Auto)** — במצב Auto, בקשות הרשאה ושאלות המשך מזהות כעת כיוון RTL לכל רכיב בנפרד. שאלות ואפשרויות בעברית, ערבית או פרסית זורמות מימין לשמאל; באנגלית נשארות משמאל לימין.
+
+> 💡 **מומלץ:** השתמשו ב**מצב Auto** \u200F(`Claude RTL: Activate RTL (Auto)`) לחוויה הטובה ביותר — כל רכיב מקבל את הכיוון הנכון אוטומטית, כולל דיאלוגי הרשאות.
 
 <details>
 <summary><strong>גרסאות קודמות</strong></summary>
+
+#### v0.3.7
+
+- **תמיכה ב-Antigravity IDE** — התוסף מזהה ותומך כעת ב-Antigravity לצד VS Code ו-Cursor.
 
 #### v0.3.6
 
@@ -485,12 +497,18 @@ MIT — ראה קובץ [LICENSE](LICENSE) לפרטים.
 
 ---
 
-### 🆕 ما الجديد (v0.3.7)
+### 🆕 ما الجديد (v0.3.8)
 
-- **دعم Antigravity IDE** — الإضافة الآن تكتشف وتدعم Antigravity إلى جانب VS Code و Cursor.
+- **RTL ذكي لطلبات الأذونات (وضع Auto)** — في وضع Auto، تكتشف طلبات الأذونات وأسئلة المتابعة اتجاه RTL لكل عنصر على حدة. الأسئلة والخيارات بالعربية أو العبرية أو الفارسية تتدفق من اليمين لليسار؛ الإنجليزية تبقى من اليسار لليمين.
+
+> 💡 **موصى به:** استخدم **وضع Auto** \u200F(`Claude RTL: Activate RTL (Auto)`) للحصول على أفضل تجربة — كل عنصر يحصل على الاتجاه الصحيح تلقائيًا، بما في ذلك نوافذ الأذونات.
 
 <details>
 <summary><strong>الإصدارات السابقة</strong></summary>
+
+#### v0.3.7
+
+- **دعم Antigravity IDE** — الإضافة الآن تكتشف وتدعم Antigravity إلى جانب VS Code و Cursor.
 
 #### v0.3.6
 
@@ -699,12 +717,18 @@ MIT — انظر ملف [LICENSE](LICENSE) للتفاصيل.
 
 ---
 
-### 🆕 تازه‌ها (v0.3.7)
+### 🆕 تازه‌ها (v0.3.8)
 
-- **پشتیبانی از Antigravity IDE** — افزونه اکنون Antigravity را در کنار VS Code و Cursor شناسایی و پشتیبانی می‌کند.
+- **RTL هوشمند برای درخواست‌های مجوز (حالت Auto)** — در حالت Auto، درخواست‌های مجوز و سؤالات پیگیری اکنون جهت RTL را برای هر عنصر جداگانه تشخیص می‌دهند. سؤالات و گزینه‌ها به فارسی، عربی یا عبری از راست به چپ جریان می‌یابند؛ انگلیسی از چپ به راست باقی می‌ماند.
+
+> 💡 **پیشنهادی:** از **حالت Auto** ‏(`Claude RTL: Activate RTL (Auto)`) برای بهترین تجربه استفاده کنید — هر عنصر به‌صورت خودکار جهت صحیح را دریافت می‌کند، از جمله دیالوگ‌های مجوز.
 
 <details>
 <summary><strong>نسخه‌های قبلی</strong></summary>
+
+#### v0.3.7
+
+- **پشتیبانی از Antigravity IDE** — افزونه اکنون Antigravity را در کنار VS Code و Cursor شناسایی و پشتیبانی می‌کند.
 
 #### v0.3.6
 

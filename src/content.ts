@@ -149,7 +149,6 @@ ${p}[class*="actionButton_"],
 ${p}[class*="selectionAttachment_"],
 ${p}[class*="attachmentInfo_"],
 ${p}[class*="attachmentText_"],
-${p}[class*="permissionRequest"],
 ${p}[class*="errorMessage_"],
 ${p}[class*="secondaryLine_"],
 ${p}[class*="todoListContainer_"],
@@ -243,6 +242,13 @@ const AUTO_RTL_RULES = `
     unicode-bidi: plaintext;
 }
 
+/* Prompt input container — no .YBYrtl ancestor in Auto mode, use #root
+   for specificity to override *{unicode-bidi:bidi-override} */
+#root [class*="messageInputContainer_"] > * {
+    unicode-bidi: plaintext;
+    text-align: start;
+}
+
 /* Question/answer blocks */
 .YBYrtl [class*="questionBlock_"],
 .YBYrtl [class*="questionHeader_"],
@@ -253,12 +259,103 @@ const AUTO_RTL_RULES = `
     unicode-bidi: plaintext;
 }
 
-/* Prompt input container — no .YBYrtl ancestor in Auto mode, use #root
-   for specificity to override *{unicode-bidi:bidi-override} */
-#root [class*="messageInputContainer_"] > * {
+`;
+
+// ── Permission RTL (shared across all modes) ─────────────────────
+
+/** CSS for JS-driven permission RTL — no prefix needed, classes added by JS */
+const PERMISSION_RTL_CSS = `
+/* ==========================================
+   Permission requests — dynamic RTL (JS-driven)
+   ========================================== */
+
+/* Container-level RTL when question contains RTL text */
+.YBYperm-rtl[class*="permissionsContainer_"],
+.YBYperm-rtl [class*="permissionRequestContent_"] {
+    direction: rtl;
+}
+
+/* Question is LTR but individual option text has RTL */
+.YBYopt-rtl[class*="optionLabel_"],
+.YBYopt-rtl[class*="optionDescription_"] {
+    direction: rtl;
+    text-align: right;
+}
+
+/* Permission elements that must stay LTR */
+.YBYperm-rtl [class*="buttonContainer_"],
+.YBYperm-rtl [class*="keyboardHints_"] {
+    direction: ltr !important;
+}
+
+/* Free-text input — auto-detect direction */
+[class*="otherInput_"] [contenteditable] {
     unicode-bidi: plaintext;
     text-align: start;
 }
+`;
+
+/** JS for dynamic permission RTL detection — shared across all modes */
+const PERMISSION_RTL_JS = `
+(function() {
+    var PERM_RTL_RE = /[\\u0590-\\u05FF\\u0600-\\u06FF\\u0750-\\u077F\\uFB50-\\uFDFF\\uFE70-\\uFEFF]/;
+    var PERM_SEL = '[class*="permissionsContainer_"]';
+
+    var LABEL_SEL = '[class*="optionLabel_"],[class*="optionDescription_"]';
+
+    function handleContainer(container) {
+        var question = container.querySelector('[class*="questionTextLarge_"]');
+        if (question && PERM_RTL_RE.test(question.textContent || '')) {
+            container.classList.add('YBYperm-rtl');
+            return;
+        }
+        tagLabels(container);
+    }
+
+    function tagLabels(root) {
+        var els = root.querySelectorAll(LABEL_SEL);
+        for (var k = 0; k < els.length; k++) {
+            if (PERM_RTL_RE.test(els[k].textContent || '')) {
+                els[k].classList.add('YBYopt-rtl');
+            }
+        }
+    }
+
+    function scanPermissions() {
+        var containers = document.querySelectorAll(PERM_SEL);
+        for (var i = 0; i < containers.length; i++) {
+            handleContainer(containers[i]);
+        }
+    }
+
+    var permObs = new MutationObserver(function(muts) {
+        for (var i = 0; i < muts.length; i++) {
+            var added = muts[i].addedNodes;
+            for (var j = 0; j < added.length; j++) {
+                var nd = added[j];
+                if (nd.nodeType !== 1) continue;
+                if (nd.matches && nd.matches(PERM_SEL)) { handleContainer(nd); continue; }
+                /* Re-rendered option — re-tag labels only if question was LTR */
+                var parent = nd.closest ? nd.closest(PERM_SEL) : null;
+                if (parent && !parent.classList.contains('YBYperm-rtl')) { tagLabels(parent); continue; }
+                if (nd.querySelectorAll) {
+                    var nested = nd.querySelectorAll(PERM_SEL);
+                    for (var k = 0; k < nested.length; k++) handleContainer(nested[k]);
+                }
+            }
+        }
+    });
+
+    if (document.body) {
+        scanPermissions();
+        permObs.observe(document.body, { childList: true, subtree: true });
+    } else {
+        document.addEventListener('DOMContentLoaded', function() {
+            scanPermissions();
+            permObs.observe(document.body, { childList: true, subtree: true });
+        });
+    }
+})();
 `;
 
 // ── CSS Assembly ──────────────────────────────────────────────────
@@ -292,6 +389,7 @@ export function generateAutoCssRules(): string {
     return assembleCss(RTL_MODE_AUTO_MARKER, [
         AUTO_RTL_RULES,
         ltrOverrideRules(P),
+        PERMISSION_RTL_CSS,
     ]);
 }
 
@@ -424,5 +522,6 @@ export const RTL_AUTO_JS_CODE = `
         }
     }).observe(root, { childList: true, subtree: true });
 })();
+${PERMISSION_RTL_JS}
 /* End RTL Toggle Button */
 `;
