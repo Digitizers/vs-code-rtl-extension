@@ -470,6 +470,162 @@ export const RTL_JS_CODE = `
 /* End RTL Toggle Button */
 `;
 
+// ── Plan Preview ──────────────────────────────────────────────────
+
+/** Markers for Plan Preview CSS injection inside extension.js */
+export const PLAN_CSS_START_MARKER = '/* RTL Plan Preview Start */';
+export const PLAN_CSS_END_MARKER = '/* RTL Plan Preview End */';
+export const PLAN_JS_START_MARKER = '/* RTL Plan Preview JS Start */';
+export const PLAN_JS_END_MARKER = '/* RTL Plan Preview JS End */';
+
+/** Plan Preview button CSS — shared across Active/Auto modes */
+const PLAN_BUTTON_CSS = `
+#yby-plan-rtl-btn {
+    position: fixed;
+    top: 8px;
+    right: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    opacity: 0.7;
+    z-index: 200;
+    transition: opacity 0.2s;
+}
+#yby-plan-rtl-btn:hover { opacity: 1; }
+#yby-plan-rtl-btn.yby-active { opacity: 1; }
+`;
+
+/** Plan Preview RTL content rules — scoped to .YBYrtl class on #content */
+const PLAN_RTL_SCOPED_CSS = `
+#content.YBYrtl {
+    direction: rtl;
+    text-align: right;
+}
+#content.YBYrtl blockquote {
+    border-left: none;
+    border-right: 3px solid var(--vscode-textBlockQuote-border);
+    padding-left: 0;
+    padding-right: 12px;
+}
+#content.YBYrtl ul, #content.YBYrtl ol {
+    padding-left: 0;
+    padding-right: 32px;
+}
+#content.YBYrtl th, #content.YBYrtl td {
+    text-align: right;
+}
+#content.YBYrtl pre,
+#content.YBYrtl code {
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: left;
+}
+`;
+
+/** Plan Preview RTL content rules — unscoped (Always mode) */
+const PLAN_RTL_ALWAYS_CSS = `
+#content {
+    direction: rtl;
+    text-align: right;
+}
+#content blockquote {
+    border-left: none;
+    border-right: 3px solid var(--vscode-textBlockQuote-border);
+    padding-left: 0;
+    padding-right: 12px;
+}
+#content ul, #content ol {
+    padding-left: 0;
+    padding-right: 32px;
+}
+#content th, #content td {
+    text-align: right;
+}
+#content pre,
+#content code {
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: left;
+}
+`;
+
+/** Assembled Plan Preview CSS for Active mode */
+export const PLAN_ACTIVE_CSS =
+    PLAN_CSS_START_MARKER + '\n' +
+    PLAN_BUTTON_CSS +
+    PLAN_RTL_SCOPED_CSS +
+    PLAN_CSS_END_MARKER;
+
+/** Assembled Plan Preview CSS for Always mode */
+export const PLAN_ALWAYS_CSS =
+    PLAN_CSS_START_MARKER + '\n' +
+    PLAN_RTL_ALWAYS_CSS +
+    PLAN_CSS_END_MARKER;
+
+/** Assembled Plan Preview CSS for Auto mode */
+export const PLAN_AUTO_CSS =
+    PLAN_CSS_START_MARKER + '\n' +
+    PLAN_BUTTON_CSS +
+    PLAN_RTL_SCOPED_CSS +
+    PLAN_CSS_END_MARKER;
+
+/** Plan Preview JS for Active mode — toggle button */
+export const PLAN_ACTIVE_JS =
+    PLAN_JS_START_MARKER + '\n' +
+    `(function() {
+    var btn = document.createElement('button');
+    btn.id = 'yby-plan-rtl-btn';
+    btn.textContent = '\\u21C4';
+    btn.title = 'Toggle RTL';
+    btn.addEventListener('click', function() {
+        var c = document.getElementById('content');
+        if (c) {
+            var isRtl = c.classList.toggle('YBYrtl');
+            btn.classList.toggle('yby-active', isRtl);
+        }
+    });
+    document.body.appendChild(btn);
+})();\n` +
+    PLAN_JS_END_MARKER;
+
+/** Plan Preview JS for Auto mode — auto-detect RTL + override button */
+export const PLAN_AUTO_JS =
+    PLAN_JS_START_MARKER + '\n' +
+    `(function() {
+    var RTL_RE = /[\\u0590-\\u05FF\\u0600-\\u06FF\\u0750-\\u077F\\uFB50-\\uFDFF\\uFE70-\\uFEFF]/;
+    var content = document.getElementById('content');
+    if (!content) return;
+    var btn = document.createElement('button');
+    btn.id = 'yby-plan-rtl-btn';
+    btn.textContent = '\\u21C4';
+    btn.title = 'Toggle RTL';
+    var manualOverride = false;
+    btn.addEventListener('click', function() {
+        manualOverride = true;
+        var isRtl = content.classList.toggle('YBYrtl');
+        btn.classList.toggle('yby-active', isRtl);
+    });
+    document.body.appendChild(btn);
+    var obs = new MutationObserver(function() {
+        if (manualOverride) return;
+        if (RTL_RE.test(content.textContent || '')) {
+            content.classList.add('YBYrtl');
+            btn.classList.add('yby-active');
+        } else {
+            content.classList.remove('YBYrtl');
+            btn.classList.remove('yby-active');
+        }
+    });
+    obs.observe(content, { childList: true, subtree: true });
+})();\n` +
+    PLAN_JS_END_MARKER;
+
 /** Auto-mode JS — scans bubbles for Hebrew and adds .YBYrtl class */
 export const RTL_AUTO_JS_CODE = `
 /* RTL Toggle Button - Added by script */

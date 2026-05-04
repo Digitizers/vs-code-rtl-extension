@@ -1,8 +1,12 @@
 # Claude Code RTL Support
 
 > **Adds Right-to-Left (RTL) text support for Hebrew, Arabic & Persian to Claude Code in VS Code, Cursor & Antigravity.**
+>
+> If you find this extension useful, please rate it on the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=yechielby.claude-code-rtl&ssr=false#review-details) or [Open VSX](https://open-vsx.org/extension/yechielby/claude-code-rtl/reviews), and [give it a ⭐ on GitHub](https://github.com/yechielby/claude-code-rtl-extension) — it helps others discover it!
 
 ---
+
+[![GitHub stars](https://img.shields.io/github/stars/yechielby/claude-code-rtl-extension?style=social)](https://github.com/yechielby/claude-code-rtl-extension)
 
 ## 🌐 Languages | שפות | اللغات | زبان‌ها
 
@@ -59,14 +63,18 @@ The original Claude Code for VS Code extension lacks native RTL support. This of
 
 ---
 
-### 🆕 What's New (v0.3.8)
+### 🆕 What's New (v0.3.9)
 
-- **Smart Permission RTL (Auto mode)** — In Auto mode, permission requests and follow-up questions now detect RTL direction per element. Questions and options in Hebrew, Arabic, or Persian flow right-to-left; English ones stay left-to-right.
+- **Plan Preview RTL support** — Claude Code's new Plan Mode tab (separate editor tab for plans) now gets full RTL support. In Auto mode, the plan content is automatically detected and switched to RTL when it contains Hebrew, Arabic, or Persian text. In Active mode, a ⇄ toggle button appears. In Always mode, the plan is always RTL. Code blocks within plans stay LTR.
 
-> 💡 **Recommended:** Use **Auto mode** (`Claude RTL: Activate RTL (Auto)`) for the best experience — each element gets the right direction automatically, including permission dialogs.
+> 💡 **Recommended:** Use **Auto mode** (`Claude RTL: Activate RTL (Auto)`) for the best experience — each element gets the right direction automatically, including Plan Preview and permission dialogs.
 
 <details>
 <summary><strong>Previous versions</strong></summary>
+
+#### v0.3.8
+
+- **Smart Permission RTL (Auto mode)** — In Auto mode, permission requests and follow-up questions now detect RTL direction per element. Questions and options in Hebrew, Arabic, or Persian flow right-to-left; English ones stay left-to-right.
 
 #### v0.3.7
 
@@ -175,7 +183,7 @@ Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS) and search for:
 | Claude's text responses | Tool calls and results |
 | Lists and paragraphs | Thinking blocks |
 | Question/answer blocks | Slash commands |
-| | Buttons and UI elements |
+| Plan Preview tab | Buttons and UI elements |
 
 ---
 
@@ -234,6 +242,12 @@ Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS) and search for:
 
 ---
 
+### ⭐ Like it? Star it!
+
+If this extension helped you, please [give it a ⭐ on GitHub](https://github.com/yechielby/claude-code-rtl-extension) — it helps others discover it!
+
+---
+
 ### 📄 License
 
 MIT — see [LICENSE](LICENSE) for details.
@@ -277,14 +291,18 @@ MIT — see [LICENSE](LICENSE) for details.
 
 ---
 
-### 🆕 מה חדש (v0.3.8)
+### 🆕 מה חדש (v0.3.9)
 
-- **RTL חכם בשאלות הרשאה (מצב Auto)** — במצב Auto, בקשות הרשאה ושאלות המשך מזהות כעת כיוון RTL לכל רכיב בנפרד. שאלות ואפשרויות בעברית, ערבית או פרסית זורמות מימין לשמאל; באנגלית נשארות משמאל לימין.
+- **תמיכת RTL בכרטיסיית Plan Preview** — כרטיסיית Plan Mode החדשה של Claude Code (כרטיסייה נפרדת לתוכניות) מקבלת כעת תמיכת RTL מלאה. במצב Auto, תוכן התוכנית מזוהה אוטומטית ועובר ל-RTL כשהוא מכיל עברית, ערבית או פרסית. במצב Active, מופיע כפתור ⇄. במצב Always, התוכנית תמיד RTL. בלוקי קוד בתוכניות נשארים LTR.
 
-> 💡 **מומלץ:** השתמשו ב**מצב Auto** \u200F(`Claude RTL: Activate RTL (Auto)`) לחוויה הטובה ביותר — כל רכיב מקבל את הכיוון הנכון אוטומטית, כולל דיאלוגי הרשאות.
+> 💡 **מומלץ:** השתמשו ב**מצב Auto** \u200F(`Claude RTL: Activate RTL (Auto)`) לחוויה הטובה ביותר — כל רכיב מקבל את הכיוון הנכון אוטומטית, כולל Plan Preview ודיאלוגי הרשאות.
 
 <details>
 <summary><strong>גרסאות קודמות</strong></summary>
+
+#### v0.3.8
+
+- **RTL חכם בשאלות הרשאה (מצב Auto)** — במצב Auto, בקשות הרשאה ושאלות המשך מזהות כעת כיוון RTL לכל רכיב בנפרד. שאלות ואפשרויות בעברית, ערבית או פרסית זורמות מימין לשמאל; באנגלית נשארות משמאל לימין.
 
 #### v0.3.7
 
@@ -393,7 +411,7 @@ MIT — see [LICENSE](LICENSE) for details.
 | תשובות טקסט של Claude | כלים ותוצאותיהם |
 | רשימות ופסקאות | בלוק חשיבה |
 | שאלות ותשובות בממשק | פקודות |
-| | כפתורים וממשק |
+| כרטיסיית Plan Preview | כפתורים וממשק |
 
 ---
 
@@ -452,6 +470,12 @@ MIT — see [LICENSE](LICENSE) for details.
 
 ---
 
+### ⭐ אהבתם? תנו כוכב!
+
+אם התוסף עזר לכם, [תנו לו ⭐ ב-GitHub](https://github.com/yechielby/claude-code-rtl-extension) — זה עוזר לאחרים לגלות אותו!
+
+---
+
 ### 📄 רישיון
 
 MIT — ראה קובץ [LICENSE](LICENSE) לפרטים.
@@ -497,14 +521,18 @@ MIT — ראה קובץ [LICENSE](LICENSE) לפרטים.
 
 ---
 
-### 🆕 ما الجديد (v0.3.8)
+### 🆕 ما الجديد (v0.3.9)
 
-- **RTL ذكي لطلبات الأذونات (وضع Auto)** — في وضع Auto، تكتشف طلبات الأذونات وأسئلة المتابعة اتجاه RTL لكل عنصر على حدة. الأسئلة والخيارات بالعربية أو العبرية أو الفارسية تتدفق من اليمين لليسار؛ الإنجليزية تبقى من اليسار لليمين.
+- **دعم RTL لعلامة تبويب Plan Preview** — علامة تبويب Plan Mode الجديدة في Claude Code (علامة تبويب منفصلة للخطط) تحصل الآن على دعم RTL كامل. في وضع Auto، يتم اكتشاف محتوى الخطة تلقائيًا والتبديل إلى RTL عند احتوائه على نص عربي أو عبري أو فارسي. في وضع Active، يظهر زر ⇄. في وضع Always، الخطة دائمًا RTL. كتل الكود داخل الخطط تبقى LTR.
 
-> 💡 **موصى به:** استخدم **وضع Auto** \u200F(`Claude RTL: Activate RTL (Auto)`) للحصول على أفضل تجربة — كل عنصر يحصل على الاتجاه الصحيح تلقائيًا، بما في ذلك نوافذ الأذونات.
+> 💡 **موصى به:** استخدم **وضع Auto** \u200F(`Claude RTL: Activate RTL (Auto)`) للحصول على أفضل تجربة — كل عنصر يحصل على الاتجاه الصحيح تلقائيًا، بما في ذلك Plan Preview ونوافذ الأذونات.
 
 <details>
 <summary><strong>الإصدارات السابقة</strong></summary>
+
+#### v0.3.8
+
+- **RTL ذكي لطلبات الأذونات (وضع Auto)** — في وضع Auto، تكتشف طلبات الأذونات وأسئلة المتابعة اتجاه RTL لكل عنصر على حدة. الأسئلة والخيارات بالعربية أو العبرية أو الفارسية تتدفق من اليمين لليسار؛ الإنجليزية تبقى من اليسار لليمين.
 
 #### v0.3.7
 
@@ -613,7 +641,7 @@ MIT — ראה קובץ [LICENSE](LICENSE) לפרטים.
 | ردود نص Claude | الأدوات ونتائجها |
 | القوائم والفقرات | كتلة التفكير |
 | الأسئلة والأجوبة في الواجهة | الأوامر |
-| | الأزرار والواجهة |
+| علامة تبويب Plan Preview | الأزرار والواجهة |
 
 ---
 
@@ -672,6 +700,12 @@ MIT — ראה קובץ [LICENSE](LICENSE) לפרטים.
 
 ---
 
+### ⭐ أعجبتك؟ امنحها نجمة!
+
+إذا أعجبتك هذه الإضافة، [امنحها ⭐ على GitHub](https://github.com/yechielby/claude-code-rtl-extension) — هذا يساعد الآخرين في اكتشافها!
+
+---
+
 ### 📄 الترخيص
 
 MIT — انظر ملف [LICENSE](LICENSE) للتفاصيل.
@@ -717,14 +751,18 @@ MIT — انظر ملف [LICENSE](LICENSE) للتفاصيل.
 
 ---
 
-### 🆕 تازه‌ها (v0.3.8)
+### 🆕 تازه‌ها (v0.3.9)
 
-- **RTL هوشمند برای درخواست‌های مجوز (حالت Auto)** — در حالت Auto، درخواست‌های مجوز و سؤالات پیگیری اکنون جهت RTL را برای هر عنصر جداگانه تشخیص می‌دهند. سؤالات و گزینه‌ها به فارسی، عربی یا عبری از راست به چپ جریان می‌یابند؛ انگلیسی از چپ به راست باقی می‌ماند.
+- **پشتیبانی RTL برای تب Plan Preview** — تب جدید Plan Mode در Claude Code (تب ویرایشگر جداگانه برای برنامه‌ها) اکنون پشتیبانی کامل RTL دارد. در حالت Auto، محتوای برنامه به‌صورت خودکار شناسایی شده و در صورت وجود متن فارسی، عربی یا عبری به RTL تغییر می‌کند. در حالت Active، دکمه ⇄ نمایش داده می‌شود. در حالت Always، برنامه همیشه RTL است. بلوک‌های کد درون برنامه‌ها LTR باقی می‌مانند.
 
-> 💡 **پیشنهادی:** از **حالت Auto** ‏(`Claude RTL: Activate RTL (Auto)`) برای بهترین تجربه استفاده کنید — هر عنصر به‌صورت خودکار جهت صحیح را دریافت می‌کند، از جمله دیالوگ‌های مجوز.
+> 💡 **پیشنهادی:** از **حالت Auto** ‏(`Claude RTL: Activate RTL (Auto)`) برای بهترین تجربه استفاده کنید — هر عنصر به‌صورت خودکار جهت صحیح را دریافت می‌کند، از جمله Plan Preview و دیالوگ‌های مجوز.
 
 <details>
 <summary><strong>نسخه‌های قبلی</strong></summary>
+
+#### v0.3.8
+
+- **RTL هوشمند برای درخواست‌های مجوز (حالت Auto)** — در حالت Auto، درخواست‌های مجوز و سؤالات پیگیری اکنون جهت RTL را برای هر عنصر جداگانه تشخیص می‌دهند. سؤالات و گزینه‌ها به فارسی، عربی یا عبری از راست به چپ جریان می‌یابند؛ انگلیسی از چپ به راست باقی می‌ماند.
 
 #### v0.3.7
 
@@ -833,7 +871,7 @@ MIT — انظر ملف [LICENSE](LICENSE) للتفاصيل.
 | پاسخ‌های متنی Claude | فراخوانی‌های ابزار و نتایج |
 | لیست‌ها و پاراگراف‌ها | بلوک‌های تفکر |
 | بلوک‌های سوال/جواب | دستورات Slash |
-| | دکمه‌ها و عناصر رابط کاربری |
+| تب Plan Preview | دکمه‌ها و عناصر رابط کاربری |
 
 ---
 
@@ -889,6 +927,12 @@ MIT — انظر ملف [LICENSE](LICENSE) للتفاصيل.
 - **macOS / Linux:** مجوزهای فایل در پوشه افزونه‌ها را بررسی کنید
 
 </details>
+
+---
+
+### ⭐ پسندیدید؟ ستاره بدهید!
+
+اگر این افزونه به شما کمک کرد، لطفاً [یک ⭐ در GitHub بدهید](https://github.com/yechielby/claude-code-rtl-extension) — این به دیگران کمک می‌کند آن را پیدا کنند!
 
 ---
 

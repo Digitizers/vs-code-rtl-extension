@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.3.9
+
+- **Plan Preview RTL support** — Claude Code's new Plan Mode tab (separate editor tab for plans) now gets full RTL support. In Auto mode, the plan content is automatically detected and switched to RTL when it contains Hebrew, Arabic, or Persian text. In Active mode, a ⇄ toggle button appears. In Always mode, the plan is always RTL. Code blocks within plans stay LTR.
+
 ## v0.3.8
 
 - **Smart Permission RTL (Auto mode)** — In Auto mode, permission requests and follow-up questions now detect RTL direction per element. Questions and options in Hebrew, Arabic, or Persian flow right-to-left; English ones stay left-to-right.

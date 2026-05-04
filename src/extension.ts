@@ -89,8 +89,9 @@ async function handleStatus(): Promise<void> {
 
     for (const s of statuses) {
         channel.appendLine(`  ${s.extension.name}`);
-        channel.appendLine(`    CSS: ${s.cssInstalled ? 'INSTALLED' : 'Not installed'}  |  ${s.cssBackupExists ? 'Backup exists' : 'No backup'}`);
-        channel.appendLine(`    JS:  ${s.jsInstalled ? 'INSTALLED' : 'Not installed'}  |  ${s.jsBackupExists ? 'Backup exists' : 'No backup'}`);
+        channel.appendLine(`    CSS:  ${s.cssInstalled ? 'INSTALLED' : 'Not installed'}  |  ${s.cssBackupExists ? 'Backup exists' : 'No backup'}`);
+        channel.appendLine(`    JS:   ${s.jsInstalled ? 'INSTALLED' : 'Not installed'}  |  ${s.jsBackupExists ? 'Backup exists' : 'No backup'}`);
+        channel.appendLine(`    Plan: ${s.planPreviewInstalled ? 'INSTALLED' : 'Not installed'}`);
         channel.appendLine(`    Mode: ${s.mode}`);
         channel.appendLine(`    Path: ${s.extension.cssPath}\n`);
     }

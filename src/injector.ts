@@ -7,6 +7,11 @@ import {
     RTL_MODE_ALWAYS_MARKER, RTL_MODE_AUTO_MARKER,
     RTL_AUTO_JS_CODE,
     generateAlwaysCssRules, generateAutoCssRules,
+    PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER,
+    PLAN_JS_START_MARKER, PLAN_JS_END_MARKER,
+    PLAN_ACTIVE_CSS, PLAN_ACTIVE_JS,
+    PLAN_ALWAYS_CSS,
+    PLAN_AUTO_CSS, PLAN_AUTO_JS,
 } from './content.js';
 
 const BIDI_OVERRIDE = '*{direction:ltr;unicode-bidi:bidi-override}';
@@ -164,6 +169,103 @@ async function restoreAndDeleteBackup(
     }
 }
 
+// ── Plan Preview injection ────────────────────────────────────────
+
+/** Anchor used to locate the Plan Preview HTML template inside extension.js */
+const PLAN_TEMPLATE_ANCHOR = '<div id="content"></div>';
+
+/**
+ * Inject RTL CSS (and optionally JS) into the Plan Preview template
+ * embedded in Claude Code's extension.js.
+ */
+async function injectPlanPreview(
+    extensionJsPath: string | null,
+    cssContent: string,
+    jsContent: string | null,
+    messages: string[],
+): Promise<boolean> {
+    if (!extensionJsPath) {
+        messages.push('  Plan: extension.js not found, skipping Plan Preview injection');
+        return false;
+    }
+
+    try {
+        const backupPath = extensionJsPath + '.bak';
+
+        // Restore from backup if it exists, otherwise create backup
+        if (await exists(backupPath)) {
+            await fs.copyFile(backupPath, extensionJsPath);
+            messages.push('  Plan: Restored extension.js from backup');
+        } else {
+            await fs.copyFile(extensionJsPath, backupPath);
+            messages.push(`  Plan: Backup created: ${backupPath}`);
+        }
+
+        let content = await fs.readFile(extensionJsPath, 'utf-8');
+
+        // Find the Plan Preview template by its unique anchor
+        const anchorIdx = content.indexOf(PLAN_TEMPLATE_ANCHOR);
+        if (anchorIdx === -1) {
+            messages.push('  Plan: Plan Preview template not found in extension.js (older Claude Code version?)');
+            return false;
+        }
+
+        // Find </style> before the anchor — this is the plan template's style block
+        const styleEndTag = '</style>';
+        const styleEndIdx = content.lastIndexOf(styleEndTag, anchorIdx);
+        if (styleEndIdx === -1) {
+            messages.push('  Plan: Could not locate </style> in Plan Preview template');
+            return false;
+        }
+
+        // Inject CSS before </style>
+        content = content.substring(0, styleEndIdx) +
+            '\n' + cssContent + '\n' +
+            content.substring(styleEndIdx);
+
+        // Inject JS if provided
+        if (jsContent) {
+            // Re-find the anchor (position shifted after CSS injection)
+            const newAnchorIdx = content.indexOf(PLAN_TEMPLATE_ANCHOR);
+            const readyMsg = "vscode.postMessage({ type: 'ready' })";
+            const readyIdx = content.indexOf(readyMsg, newAnchorIdx);
+            if (readyIdx === -1) {
+                messages.push('  Plan: Could not locate JS injection point in Plan Preview template');
+            } else {
+                content = content.substring(0, readyIdx) +
+                    jsContent + '\n      ' +
+                    content.substring(readyIdx);
+                messages.push('  Plan: RTL JS injected into Plan Preview');
+            }
+        }
+
+        await fs.writeFile(extensionJsPath, content, 'utf-8');
+        messages.push('  Plan: RTL CSS injected into Plan Preview');
+        return true;
+    } catch (e: unknown) {
+        const err = e as NodeJS.ErrnoException;
+        if (err.code === 'EPERM' || err.code === 'EACCES') {
+            messages.push(`  Plan: Permission denied: ${extensionJsPath}`);
+        } else {
+            messages.push(`  Plan: Error: ${err.message}`);
+        }
+        return false;
+    }
+}
+
+/**
+ * Check if Plan Preview RTL is installed in extension.js.
+ */
+async function isPlanPreviewInstalled(extensionJsPath: string | null): Promise<boolean> {
+    if (!extensionJsPath) return false;
+    try {
+        const content = await fs.readFile(extensionJsPath, 'utf-8');
+        return content.includes(PLAN_CSS_START_MARKER);
+    } catch {
+        return false;
+    }
+}
+
 // ── Status ────────────────────────────────────────────────────────
 
 /**
@@ -186,6 +288,7 @@ export async function getStatus(extensions: ClaudeExtensionInfo[]): Promise<RtlS
             extension: ext,
             cssInstalled,
             jsInstalled: await isJsInstalled(ext.jsPath),
+            planPreviewInstalled: await isPlanPreviewInstalled(ext.extensionJsPath),
             cssBackupExists: await exists(ext.cssPath + '.bak'),
             jsBackupExists: ext.jsPath ? await exists(ext.jsPath + '.bak') : false,
             mode: autoMode ? 'auto' : alwaysMode ? 'always' : cssInstalled ? 'active' : 'inactive',
@@ -216,6 +319,10 @@ export async function addRtl(ext: ClaudeExtensionInfo): Promise<InjectionResult>
         changed = true;
     }
 
+    if (await injectPlanPreview(ext.extensionJsPath, PLAN_ACTIVE_CSS, PLAN_ACTIVE_JS, messages)) {
+        changed = true;
+    }
+
     return { messages, changed };
 }
 
@@ -240,6 +347,10 @@ export async function addRtlAlways(ext: ClaudeExtensionInfo): Promise<InjectionR
         messages.push(`  JS:  No button to remove (Always mode — no JS needed)`);
     }
 
+    if (await injectPlanPreview(ext.extensionJsPath, PLAN_ALWAYS_CSS, null, messages)) {
+        changed = true;
+    }
+
     return { messages, changed };
 }
 
@@ -259,6 +370,10 @@ export async function addRtlAuto(ext: ClaudeExtensionInfo): Promise<InjectionRes
         messages.push('  JS:  index.js not found, skipping auto-detection injection');
     } else if (await injectFile(ext.jsPath, RTL_AUTO_JS_CODE, 'JS', messages)) {
         messages.push(`  JS:  Auto-detection script added to ${ext.name}`);
+        changed = true;
+    }
+
+    if (await injectPlanPreview(ext.extensionJsPath, PLAN_AUTO_CSS, PLAN_AUTO_JS, messages)) {
         changed = true;
     }
 
@@ -343,6 +458,13 @@ export async function removeRtl(ext: ClaudeExtensionInfo): Promise<InjectionResu
         messages.push(`  JS:  Button not installed in ${ext.name}`);
     } else if (await removeInjected(ext.jsPath, jsInstalled, JS_START_MARKER, JS_END_MARKER, 'JS', ext.name, messages)) {
         changed = true;
+    }
+
+    // Restore extension.js (Plan Preview) from backup
+    if (ext.extensionJsPath && await isPlanPreviewInstalled(ext.extensionJsPath)) {
+        if (await restoreAndDeleteBackup(ext.extensionJsPath, 'Plan', messages)) {
+            changed = true;
+        }
     }
 
     return { messages, changed };

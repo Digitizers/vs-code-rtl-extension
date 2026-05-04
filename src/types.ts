@@ -6,6 +6,8 @@ export interface ClaudeExtensionInfo {
     cssPath: string;
     /** Full path to webview/index.js (may not exist) */
     jsPath: string | null;
+    /** Full path to extension.js (for Plan Preview injection) */
+    extensionJsPath: string | null;
     /** Directory name, e.g. "anthropic.claude-code-2.1.49-win32-x64" */
     name: string;
 }
@@ -18,6 +20,7 @@ export interface RtlStatus {
     extension: ClaudeExtensionInfo;
     cssInstalled: boolean;
     jsInstalled: boolean;
+    planPreviewInstalled: boolean;
     cssBackupExists: boolean;
     jsBackupExists: boolean;
     mode: RtlMode;

@@ -189,6 +189,7 @@ export async function findClaudeExtensions(): Promise<ClaudeExtensionInfo[]> {
             const dir = path.join(extDir, match);
             const cssPath = path.join(dir, 'webview', 'index.css');
             const jsPath = path.join(dir, 'webview', 'index.js');
+            const extensionJsPath = path.join(dir, 'extension.js');
 
             if (!(await exists(cssPath))) continue;
 
@@ -196,6 +197,7 @@ export async function findClaudeExtensions(): Promise<ClaudeExtensionInfo[]> {
                 dir,
                 cssPath,
                 jsPath: (await exists(jsPath)) ? jsPath : null,
+                extensionJsPath: (await exists(extensionJsPath)) ? extensionJsPath : null,
                 name: match,
             });
         }
