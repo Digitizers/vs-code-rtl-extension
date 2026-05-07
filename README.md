@@ -242,6 +242,18 @@ Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS) and search for:
 
 ---
 
+### 🤝 Related RTL-for-AI Projects
+
+A small community of independent developers maintains userland RTL fixes for the AI-tooling stack. The surfaces are largely disjoint — pick whichever matches where you're hitting the BiDi problem, and cross-install as needed:
+
+- **[Adaptive-RTL-Extension](https://github.com/Lidor-Mashiach/Adaptive-RTL-Extension)** by Lidor Mashiach — generic browser extension with click-to-select RTL for any web page, including LLM chat UIs (Claude.ai, ChatGPT, Gemini, etc.).
+- **[Claude.ai RTL Support (Chrome extension)](https://chromewebstore.google.com/detail/claude-ai-rtl-support/lkopcjdmfmffphbomfhecalbojiaeape)** — Chrome extension purpose-built for the Claude.ai web UI specifically. Lighter than the generic adaptive one if you only need RTL on Claude's website.
+- **[rtl-for-vs-code-agents](https://github.com/GuyRonnen/rtl-for-vs-code-agents)** by Guy Ronnen — VS Code extension covering the broader agent webview layer: GitHub Copilot, Cursor, Antigravity, Gemini Code Assist. Complementary to this extension's IDE-panel-specific fix.
+- **[Claude-for-word-RTL-fix](https://github.com/asaf-aizone/Claude-for-word-RTL-fix)** by Asaf Aizone — Hebrew/Arabic RTL fix for the Claude for Microsoft Office (Word/Excel/PowerPoint) add-in.
+- **[kivun-terminal-wsl](https://github.com/noambrand/kivun-terminal-wsl)** by Noam Brand — terminal-layer fix for the `claude` CLI itself: a `kivun-claude-bidi` Node wrapper for Claude Code's TUI output, plus a one-click installer for WSL2+Konsole on Windows or native shell installers on Linux.
+
+---
+
 ### ⭐ Like it? Star it!
 
 If this extension helped you, please [give it a ⭐ on GitHub](https://github.com/yechielby/claude-code-rtl-extension) — it helps others discover it!
