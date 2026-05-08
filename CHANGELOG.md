@@ -15,7 +15,7 @@
 
 ## v0.3.6
 
-- **Smart input direction** — The input field now detects text direction on the fly based on the first character you type. Start with a Hebrew, Arabic, or Persian letter and it flows RTL; start with English and it stays LTR. The only exception is **Active** mode with the ⇄ button toggled on — there the input is always RTL.
+- **Smart input direction** — The input field now detects text direction on the fly based on the first character you type. Start with a Hebrew, Arabic, or Persian letter and it flows RTL; start with English and it stays LTR. The only exception is in **Active** mode with the ⇄ button toggled on — in this case, the input is always RTL.
 - **Fallback button placement** — When the chat header isn't rendered yet (e.g. resuming an active session on startup), the ⇄ toggle button now appears above the input area so you're never left without it.
 - **Safer auto-reactivate** — Version tracking ensures RTL is cleanly re-injected after a Claude Code update instead of stacking on stale CSS.
 
@@ -25,10 +25,10 @@
 
 ## v0.3.0
 
-- **Always RTL mode** — A new mode that permanently enables RTL without needing the toggle button. CSS is injected directly without class dependency, so RTL is always active. Switch between modes via the status bar menu or command palette.
+- **Always RTL mode** — A new mode that permanently enables RTL without needing the toggle button. CSS is injected directly without class dependency, ensuring RTL is always active. You can switch between modes via the status bar menu or command palette.
 - **Auto-reactivate** — RTL is automatically restored when Claude Code updates replace its files. No need to manually re-activate.
 - **Auto-activate on install** — RTL activates automatically on first install.
 
 ## v0.2.0
 
-- **Fix BiDi command** — Solves the reversed text issue where Hebrew/Arabic/Persian words appear mirrored (e.g. "םולש" instead of "שלום"). This happens because Claude Code injects a `*{direction:ltr;unicode-bidi:bidi-override}` rule that forces all text to LTR. The new **Fix BiDi** command activates RTL and removes this problematic rule automatically.
+- **Fix BiDi command** — Solves the reversed text issue where Hebrew/Arabic/Persian words appear mirrored (e.g. "םולש" instead of "שלום"). This happens because Claude Code injects a `* { direction: ltr; unicode-bidi: bidi-override; }` rule that forces all text to LTR. The new **Fix BiDi** command activates RTL and removes this problematic rule automatically.
