@@ -1,5 +1,8 @@
-# Claude Code RTL Support
+# <img src="claude-code-rtl-logo.png" alt="Claude Code RTL Logo" width="24">  Claude Code RTL Support
 ### Adds Right-to-Left (`RTL`) text support for Hebrew, Arabic & Persian to `Claude Code` in VS Code, Cursor & Antigravity.
+
+**Extends the official [Claude Code for VS Code](https://marketplace.visualstudio.com/items?itemName=anthropic.claude-code) extension**
+injects RTL CSS into the chat interface while keeping code blocks, tool output, and UI elements properly LTR.
 
 ![Enhancer](https://img.shields.io/badge/Add--on-Claude%20Code%20for%20VS%20Code-D97757?logo=claude&logoColor=D97757)
 ![Version](https://img.shields.io/open-vsx/v/yechielby/claude-code-rtl?label=Version&color=c160ef)
@@ -12,7 +15,7 @@
 
 [![GitHub stars](https://img.shields.io/github/stars/yechielby/claude-code-rtl-extension?style=social)](https://github.com/yechielby/claude-code-rtl-extension)
 [![Open VSX Installs](https://img.shields.io/open-vsx/dt/yechielby/claude-code-rtl?label=Open%20VSX:%20downloads&color=c160ef)](https://open-vsx.org/extension/yechielby/claude-code-rtl)
-[![VS Code Marketplace Installs](https://img.shields.io/badge/VS%20Code%20Marketplace:%20downloads-%2B2.1k-107c10)](https://marketplace.visualstudio.com/items?itemName=yechielby.claude-code-rtl)
+[![VS Code Marketplace Installs](https://img.shields.io/badge/VS%20Code%20Marketplace:%20downloads-%2B2.5k-107c10)](https://marketplace.visualstudio.com/items?itemName=yechielby.claude-code-rtl)
 
 ## 🌐 Languages | שפות | اللغات | زبان‌ها
 
@@ -46,7 +49,7 @@ A VS Code extension that adds Right-to-Left (RTL) text direction support to the 
 
 ### 🤔 Why is this needed?
 
-The original Claude Code for VS Code extension lacks native RTL support. This often results in:
+The original `Claude Code for VS Code` extension lacks native RTL support. This often results in:
 
 - ❌ Hebrew, Arabic, and Persian text appearing misaligned
 - ❌ Difficulty reading mixed-language conversations (code + RTL text)
@@ -286,7 +289,7 @@ MIT — see [LICENSE](LICENSE) for details.
 
 ### 🤔 למה זה נחוץ?
 
-תוסף Claude Code for VS Code המקורי חסר תמיכת RTL מובנית. הדבר גורם לעיתים קרובות ל:
+תוסף `Claude Code for VS Code` המקורי חסר תמיכת RTL מובנית. הדבר גורם לעיתים קרובות ל:
 
 - ❌ טקסט עברי, ערבי ופרסי שמוצג בצורה לא מיושרת
 - ❌ קושי בקריאת שיחות בשפות מעורבות (קוד + טקסט RTL)
@@ -528,7 +531,7 @@ MIT — ראה קובץ [LICENSE](LICENSE) לפרטים.
 
 ### 🤔 لماذا هذا مطلوب؟
 
-إضافة Claude Code for VS Code الأصلية تفتقر إلى دعم RTL المدمج. وهذا كثيرًا ما يؤدي إلى:
+إضافة `Claude Code for VS Code` الأصلية تفتقر إلى دعم RTL المدمج. وهذا كثيرًا ما يؤدي إلى:
 
 - ❌ ظهور النصوص العربية والعبرية والفارسية بمحاذاة غير صحيحة
 - ❌ صعوبة قراءة المحادثات متعددة اللغات (كود + نص RTL)
@@ -770,7 +773,7 @@ MIT — انظر ملف [LICENSE](LICENSE) للتفاصيل.
 
 ### 🤔 چرا این مورد نیاز است؟
 
-افزونه اصلی Claude Code for VS Code فاقد پشتیبانی بومی RTL است. این اغلب منجر به موارد زیر می‌شود:
+افزونه اصلی `Claude Code for VS Code` فاقد پشتیبانی بومی RTL است. این اغلب منجر به موارد زیر می‌شود:
 
 - ❌ نمایش نامرتب متن فارسی، عربی و عبری
 - ❌ دشواری در خواندن مکالمات چندزبانه (کد + متن RTL)

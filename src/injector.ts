@@ -53,7 +53,7 @@ export async function isAlwaysMode(cssPath: string): Promise<boolean> {
 }
 
 /**
- * Check if CSS is in "auto" mode (per-element Hebrew detection).
+ * Check if CSS is in "auto" mode (per-element RTL detection).
  */
 export async function isAutoMode(cssPath: string): Promise<boolean> {
     try {
