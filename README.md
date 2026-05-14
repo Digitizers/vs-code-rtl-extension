@@ -1,12 +1,12 @@
 # <img src="claude-code-rtl-logo.png" alt="Claude Code RTL Logo" width="24">  Claude Code RTL Support
-### Adds Right-to-Left (`RTL`) text support for Hebrew, Arabic & Persian to `Claude Code` in VS Code, Cursor & Antigravity.
+### Adds Right-to-Left (`RTL`) text support for Hebrew, Arabic & Persian to `Claude Code` in VS Code, Cursor, Antigravity & Kiro.
 
 **Extends the official [Claude Code for VS Code](https://marketplace.visualstudio.com/items?itemName=anthropic.claude-code) extension**
 injects RTL CSS into the chat interface while keeping code blocks, tool output, and UI elements properly LTR.
 
 ![Enhancer](https://img.shields.io/badge/Add--on-Claude%20Code%20for%20VS%20Code-D97757?logo=claude&logoColor=D97757)
 ![Version](https://img.shields.io/open-vsx/v/yechielby/claude-code-rtl?label=Version&color=c160ef)
-![IDE](https://img.shields.io/badge/IDE%20Support-VS%20Code%20/%20Cursor%20/%20Antigravity-007ACC)
+![IDE](https://img.shields.io/badge/IDE%20Support-VS%20Code%20/%20Cursor%20/%20Antigravity%20/%20Kiro-007ACC)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
 > If you find this extension useful, please rate it on the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=yechielby.claude-code-rtl&ssr=false#review-details) or [Open VSX](https://open-vsx.org/extension/yechielby/claude-code-rtl/reviews), and [give it a ⭐ on GitHub](https://github.com/yechielby/claude-code-rtl-extension) — it helps others discover it!
@@ -45,7 +45,7 @@ injects RTL CSS into the chat interface while keeping code blocks, tool output, 
 
 ## 🇺🇸 English
 
-A VS Code extension that adds Right-to-Left (RTL) text direction support to the **Claude Code** chat interface in VS Code, Cursor, and Antigravity. Designed for Hebrew, Arabic, and Persian speakers who want natural text alignment when chatting with Claude — without affecting code blocks or UI elements.
+A VS Code extension that adds Right-to-Left (RTL) text direction support to the **Claude Code** chat interface in VS Code, Cursor, Antigravity, and Kiro. Designed for Hebrew, Arabic, and Persian speakers who want natural text alignment when chatting with Claude — without affecting code blocks or UI elements.
 
 ### 🤔 Why is this needed?
 
@@ -72,14 +72,22 @@ The original `Claude Code for VS Code` extension lacks native RTL support. This 
 
 ---
 
-### 🆕 What's New (v0.3.9)
+### 🆕 What's New (v0.4.0)
 
-- **Plan Preview RTL support** — Claude Code's new Plan Mode tab (separate editor tab for plans) now gets full RTL support. In Auto mode, the plan content is automatically detected and switched to RTL when it contains Hebrew, Arabic, or Persian text. In Active mode, a ⇄ toggle button appears. In Always mode, the plan is always RTL. Code blocks within plans stay LTR.
+- **Custom font settings** — Two new VS Code settings let you choose the fonts Claude Code uses:
+  - `claude-code-rtl.textFont` — font family for messages and the input box (e.g. `Vazirmatn` for proper Persian rendering, `Tahoma` for Hebrew/Arabic)
+  - `claude-code-rtl.codeFont` — font family for code blocks and diff editor (e.g. `JetBrains Mono`, `Fira Code`)
+  - Leave a setting blank to keep Claude Code's default font.
+- **Kiro IDE support** — The extension now detects and supports Kiro alongside VS Code, Cursor, and Antigravity.
 
 > 💡 **Recommended:** Use **Auto mode** (`Claude RTL: Activate RTL (Auto)`) for the best experience — each element gets the right direction automatically, including Plan Preview and permission dialogs.
 
 <details>
 <summary><strong>Previous versions</strong></summary>
+
+#### v0.3.9
+
+- **Plan Preview RTL support** — Claude Code's new Plan Mode tab (separate editor tab for plans) now gets full RTL support. In Auto mode, the plan content is automatically detected and switched to RTL when it contains Hebrew, Arabic, or Persian text. In Active mode, a ⇄ toggle button appears. In Always mode, the plan is always RTL. Code blocks within plans stay LTR.
 
 #### v0.3.8
 
@@ -126,6 +134,7 @@ The original `Claude Code for VS Code` extension lacks native RTL support. This 
 | VS Code |
 | Cursor |
 | Antigravity |
+| Kiro |
 
 ---
 
@@ -196,10 +205,34 @@ Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS) and search for:
 
 ---
 
+### ⚙️ Font Settings (optional)
+
+Customize the fonts Claude Code uses by adding these to your `settings.json` (`Ctrl+,` / `Cmd+,` → search `claude-code-rtl`):
+
+| Setting | Description | Example values |
+|---|---|---|
+| `claude-code-rtl.textFont` | Font for messages and the input box | `Vazirmatn`, `Tahoma` |
+| `claude-code-rtl.codeFont` | Font for code blocks and diff editor | `JetBrains Mono`, `Fira Code` |
+
+```jsonc
+{
+  "claude-code-rtl.textFont": "Vazirmatn",
+  "claude-code-rtl.codeFont": "JetBrains Mono"
+}
+```
+
+> 💡 **Persian users:** `Vazirmatn` is strongly recommended for proper Persian numeral and character rendering — install it from [vazirmatn.rastikerdar.com](https://vazirmatn.rastikerdar.com/).
+>
+> 💡 Leave a setting blank to keep Claude Code's default font.
+>
+> 🔄 After changing a font setting, you'll be prompted to reload the window so the new CSS takes effect.
+
+---
+
 ### 🔧 Troubleshooting
 
 <details>
-<summary><strong>❓ Can't find the plugin in Cursor or Antigravity</strong></summary>
+<summary><strong>❓ Can't find the plugin in Cursor, Antigravity or Kiro</strong></summary>
 
 - Search for the plugin by its ID: `claude-code-rtl`
 - The display name "Claude Code RTL Support" may not appear in search results on all platforms
@@ -285,7 +318,7 @@ MIT — see [LICENSE](LICENSE) for details.
 
 ## 🇮🇱 עברית
 
-תוסף ל-VS Code שמוסיף תמיכת כיווניות מימין לשמאל (RTL) לממשק הצ'אט של **Claude Code for VS Code**. מיועד לדוברי עברית, ערבית ופרסית שרוצים יישור טקסט טבעי בשיחה עם Claude — מבלי לפגוע בבלוקי קוד או ברכיבי הממשק.
+תוסף ל-VS Code שמוסיף תמיכת כיווניות מימין לשמאל (RTL) לממשק הצ'אט של **Claude Code** ב-VS Code, Cursor, Antigravity ו-Kiro. מיועד לדוברי עברית, ערבית ופרסית שרוצים יישור טקסט טבעי בשיחה עם Claude — מבלי לפגוע בבלוקי קוד או ברכיבי הממשק.
 
 ### 🤔 למה זה נחוץ?
 
@@ -312,14 +345,22 @@ MIT — see [LICENSE](LICENSE) for details.
 
 ---
 
-### 🆕 מה חדש (v0.3.9)
+### 🆕 מה חדש (v0.4.0)
 
-- **תמיכת RTL בכרטיסיית Plan Preview** — כרטיסיית Plan Mode החדשה של Claude Code (כרטיסייה נפרדת לתוכניות) מקבלת כעת תמיכת RTL מלאה. במצב Auto, תוכן התוכנית מזוהה אוטומטית ועובר ל-RTL כשהוא מכיל עברית, ערבית או פרסית. במצב Active, מופיע כפתור ⇄. במצב Always, התוכנית תמיד RTL. בלוקי קוד בתוכניות נשארים LTR.
+- **הגדרות גופן מותאמות אישית** — שתי הגדרות חדשות ב-VS Code לבחירת הגופנים ש-Claude Code משתמש בהם:
+  - `claude-code-rtl.textFont` — גופן להודעות ולשדה הקלט (למשל `Vazirmatn` לרינדור נכון של פרסית, `Tahoma` לעברית/ערבית)
+  - `claude-code-rtl.codeFont` — גופן לבלוקי קוד ולעורך ה-diff (למשל `JetBrains Mono`, `Fira Code`)
+  - השאירו את ההגדרה ריקה כדי לשמור על גופן ברירת המחדל של Claude Code.
+- **תמיכה ב-Kiro IDE** — התוסף מזהה ותומך כעת ב-Kiro לצד VS Code, Cursor ו-Antigravity.
 
 > 💡 **מומלץ:** השתמשו ב**מצב Auto** &rlm;(`Claude RTL: Activate RTL (Auto)`) לחוויה הטובה ביותר — כל רכיב מקבל את הכיוון הנכון אוטומטית, כולל Plan Preview ודיאלוגי הרשאות.
 
 <details>
 <summary><strong>גרסאות קודמות</strong></summary>
+
+#### v0.3.9
+
+- **תמיכת RTL בכרטיסיית Plan Preview** — כרטיסיית Plan Mode החדשה של Claude Code (כרטיסייה נפרדת לתוכניות) מקבלת כעת תמיכת RTL מלאה. במצב Auto, תוכן התוכנית מזוהה אוטומטית ועובר ל-RTL כשהוא מכיל עברית, ערבית או פרסית. במצב Active, מופיע כפתור ⇄. במצב Always, התוכנית תמיד RTL. בלוקי קוד בתוכניות נשארים LTR.
 
 #### v0.3.8
 
@@ -366,6 +407,7 @@ MIT — see [LICENSE](LICENSE) for details.
 | VS Code |
 | Cursor |
 | Antigravity |
+| Kiro |
 
 ---
 
@@ -436,10 +478,32 @@ MIT — see [LICENSE](LICENSE) for details.
 
 ---
 
+### ⚙️ הגדרות גופן (אופציונלי)
+
+ניתן להתאים אישית את הגופנים ש-Claude Code משתמש בהם דרך `settings.json` &rlm;(`Ctrl+,` / `Cmd+,` ← חפשו `claude-code-rtl`):
+
+| הגדרה | תיאור | דוגמאות |
+|---|---|---|
+| `claude-code-rtl.textFont` | גופן להודעות ולשדה הקלט | `Vazirmatn`, `Tahoma` |
+| `claude-code-rtl.codeFont` | גופן לבלוקי קוד ולעורך diff | `JetBrains Mono`, `Fira Code` |
+
+```jsonc
+{
+  "claude-code-rtl.textFont": "Tahoma",
+  "claude-code-rtl.codeFont": "JetBrains Mono"
+}
+```
+
+> 💡 השאירו הגדרה ריקה כדי לשמור על גופן ברירת המחדל של Claude Code.
+>
+> 🔄 לאחר שינוי הגדרת גופן תופיע התראה לטעון את החלון מחדש כדי שה-CSS החדש ייכנס לתוקף.
+
+---
+
 ### 🔧 פתרון בעיות
 
 <details>
-<summary><strong>❓ לא מוצאים את התוסף ב-Cursor או Antigravity</strong></summary>
+<summary><strong>❓ לא מוצאים את התוסף ב-Cursor, Antigravity או Kiro</strong></summary>
 
 - חפשו את התוסף לפי המזהה שלו: `claude-code-rtl`
 - השם המלא "Claude Code RTL Support" לא תמיד מופיע בתוצאות חיפוש בכל הפלטפורמות
@@ -527,7 +591,7 @@ MIT — ראה קובץ [LICENSE](LICENSE) לפרטים.
 
 ## 🇸🇦 عربية
 
-إضافة لـ VS Code تضيف دعم اتجاه النص من اليمين إلى اليسار (RTL) لواجهة المحادثة في **Claude Code for VS Code**. مصممة لمتحدثي العربية والعبرية والفارسية الذين يريدون محاذاة طبيعية للنص عند التحدث مع Claude — دون التأثير على كتل الكود أو عناصر الواجهة.
+إضافة لـ VS Code تضيف دعم اتجاه النص من اليمين إلى اليسار (RTL) لواجهة المحادثة في **Claude Code** على VS Code و Cursor و Antigravity و Kiro. مصممة لمتحدثي العربية والعبرية والفارسية الذين يريدون محاذاة طبيعية للنص عند التحدث مع Claude — دون التأثير على كتل الكود أو عناصر الواجهة.
 
 ### 🤔 لماذا هذا مطلوب؟
 
@@ -554,14 +618,22 @@ MIT — ראה קובץ [LICENSE](LICENSE) לפרטים.
 
 ---
 
-### 🆕 ما الجديد (v0.3.9)
+### 🆕 ما الجديد (v0.4.0)
 
-- **دعم RTL لعلامة تبويب Plan Preview** — علامة تبويب Plan Mode الجديدة في Claude Code (علامة تبويب منفصلة للخطط) تحصل الآن على دعم RTL كامل. في وضع Auto، يتم اكتشاف محتوى الخطة تلقائيًا والتبديل إلى RTL عند احتوائه على نص عربي أو عبري أو فارسي. في وضع Active، يظهر زر ⇄. في وضع Always، الخطة دائمًا RTL. كتل الكود داخل الخطط تبقى LTR.
+- **إعدادات خط مخصصة** — إعدادان جديدان في VS Code يسمحان لك باختيار الخطوط التي يستخدمها Claude Code:
+  - `claude-code-rtl.textFont` — خط الرسائل وحقل الإدخال (مثل `Vazirmatn` للعرض الصحيح للفارسية، `Tahoma` للعربية/العبرية)
+  - `claude-code-rtl.codeFont` — خط كتل الكود ومحرر diff (مثل `JetBrains Mono`، `Fira Code`)
+  - اترك الإعداد فارغًا للحفاظ على الخط الافتراضي لـ Claude Code.
+- **دعم Kiro IDE** — الإضافة الآن تكتشف وتدعم Kiro إلى جانب VS Code و Cursor و Antigravity.
 
 > 💡 **موصى به:** استخدم **وضع Auto** &rlm;(`Claude RTL: Activate RTL (Auto)`) للحصول على أفضل تجربة — كل عنصر يحصل على الاتجاه الصحيح تلقائيًا، بما في ذلك Plan Preview ونوافذ الأذونات.
 
 <details>
 <summary><strong>الإصدارات السابقة</strong></summary>
+
+#### v0.3.9
+
+- **دعم RTL لعلامة تبويب Plan Preview** — علامة تبويب Plan Mode الجديدة في Claude Code (علامة تبويب منفصلة للخطط) تحصل الآن على دعم RTL كامل. في وضع Auto، يتم اكتشاف محتوى الخطة تلقائيًا والتبديل إلى RTL عند احتوائه على نص عربي أو عبري أو فارسي. في وضع Active، يظهر زر ⇄. في وضع Always، الخطة دائمًا RTL. كتل الكود داخل الخطط تبقى LTR.
 
 #### v0.3.8
 
@@ -608,6 +680,7 @@ MIT — ראה קובץ [LICENSE](LICENSE) לפרטים.
 | VS Code |
 | Cursor |
 | Antigravity |
+| Kiro |
 
 ---
 
@@ -678,10 +751,34 @@ MIT — ראה קובץ [LICENSE](LICENSE) לפרטים.
 
 ---
 
+### ⚙️ إعدادات الخط (اختياري)
+
+يمكنك تخصيص الخطوط التي يستخدمها Claude Code عبر `settings.json` &rlm;(`Ctrl+,` / `Cmd+,` ← ابحث عن `claude-code-rtl`):
+
+| الإعداد | الوصف | أمثلة |
+|---|---|---|
+| `claude-code-rtl.textFont` | خط الرسائل وحقل الإدخال | `Vazirmatn`, `Tahoma` |
+| `claude-code-rtl.codeFont` | خط كتل الكود ومحرر diff | `JetBrains Mono`, `Fira Code` |
+
+```jsonc
+{
+  "claude-code-rtl.textFont": "Tahoma",
+  "claude-code-rtl.codeFont": "JetBrains Mono"
+}
+```
+
+> 💡 **لمستخدمي الفارسية:** يُنصح بشدة باستخدام `Vazirmatn` لعرض صحيح للأرقام والحروف الفارسية — يمكنك تثبيته من [vazirmatn.rastikerdar.com](https://vazirmatn.rastikerdar.com/).
+>
+> 💡 اترك أي إعداد فارغًا للحفاظ على الخط الافتراضي لـ Claude Code.
+>
+> 🔄 بعد تغيير إعداد الخط، سيظهر لك إشعار لإعادة تحميل النافذة حتى يدخل CSS الجديد حيز التنفيذ.
+
+---
+
 ### 🔧 حل المشاكل
 
 <details>
-<summary><strong>❓ لا يمكن العثور على الإضافة في Cursor أو Antigravity</strong></summary>
+<summary><strong>❓ لا يمكن العثور على الإضافة في Cursor أو Antigravity أو Kiro</strong></summary>
 
 - ابحث عن الإضافة باستخدام معرّفها: `claude-code-rtl`
 - الاسم الكامل "Claude Code RTL Support" قد لا يظهر في نتائج البحث على جميع المنصات
@@ -769,7 +866,7 @@ MIT — انظر ملف [LICENSE](LICENSE) للتفاصيل.
 
 ## 🇮🇷 فارسی
 
-یک افزونه VS Code که پشتیبانی از جهت متن راست به چپ (RTL) را به رابط چت **Claude Code for VS Code** اضافه می‌کند. طراحی شده برای فارسی‌زبانان، عبری‌زبانان و عربی‌زبانانی که می‌خواهند تراز متن طبیعی هنگام چت با Claude داشته باشند — بدون تأثیر بر بلوک‌های کد یا عناصر رابط کاربری.
+یک افزونه VS Code که پشتیبانی از جهت متن راست به چپ (RTL) را به رابط چت **Claude Code** در VS Code، Cursor، Antigravity و Kiro اضافه می‌کند. طراحی شده برای فارسی‌زبانان، عبری‌زبانان و عربی‌زبانانی که می‌خواهند تراز متن طبیعی هنگام چت با Claude داشته باشند — بدون تأثیر بر بلوک‌های کد یا عناصر رابط کاربری.
 
 ### 🤔 چرا این مورد نیاز است؟
 
@@ -796,14 +893,22 @@ MIT — انظر ملف [LICENSE](LICENSE) للتفاصيل.
 
 ---
 
-### 🆕 تازه‌ها (v0.3.9)
+### 🆕 تازه‌ها (v0.4.0)
 
-- **پشتیبانی RTL برای تب Plan Preview** — تب جدید Plan Mode در Claude Code (تب ویرایشگر جداگانه برای برنامه‌ها) اکنون پشتیبانی کامل RTL دارد. در حالت Auto، محتوای برنامه به‌صورت خودکار شناسایی شده و در صورت وجود متن فارسی، عربی یا عبری به RTL تغییر می‌کند. در حالت Active، دکمه ⇄ نمایش داده می‌شود. در حالت Always، برنامه همیشه RTL است. بلوک‌های کد درون برنامه‌ها LTR باقی می‌مانند.
+- **تنظیمات فونت سفارشی** — دو تنظیم جدید VS Code که به شما اجازه می‌دهد فونت‌های مورد استفاده Claude Code را انتخاب کنید:
+  - `claude-code-rtl.textFont` — فونت پیام‌ها و فیلد ورودی (مثلاً `Vazirmatn` برای نمایش صحیح فارسی، `Tahoma` برای عبری/عربی)
+  - `claude-code-rtl.codeFont` — فونت بلوک‌های کد و ویرایشگر diff (مثلاً `JetBrains Mono`، `Fira Code`)
+  - تنظیم را خالی بگذارید تا فونت پیش‌فرض Claude Code حفظ شود.
+- **پشتیبانی از Kiro IDE** — افزونه اکنون Kiro را در کنار VS Code، Cursor و Antigravity شناسایی و پشتیبانی می‌کند.
 
 > 💡 **پیشنهادی:** از **حالت Auto** ‏(`Claude RTL: Activate RTL (Auto)`) برای بهترین تجربه استفاده کنید — هر عنصر به‌صورت خودکار جهت صحیح را دریافت می‌کند، از جمله Plan Preview و دیالوگ‌های مجوز.
 
 <details>
 <summary><strong>نسخه‌های قبلی</strong></summary>
+
+#### v0.3.9
+
+- **پشتیبانی RTL برای تب Plan Preview** — تب جدید Plan Mode در Claude Code (تب ویرایشگر جداگانه برای برنامه‌ها) اکنون پشتیبانی کامل RTL دارد. در حالت Auto، محتوای برنامه به‌صورت خودکار شناسایی شده و در صورت وجود متن فارسی، عربی یا عبری به RTL تغییر می‌کند. در حالت Active، دکمه ⇄ نمایش داده می‌شود. در حالت Always، برنامه همیشه RTL است. بلوک‌های کد درون برنامه‌ها LTR باقی می‌مانند.
 
 #### v0.3.8
 
@@ -850,6 +955,7 @@ MIT — انظر ملف [LICENSE](LICENSE) للتفاصيل.
 | VS Code |
 | Cursor |
 | Antigravity |
+| Kiro |
 
 ---
 
@@ -920,10 +1026,34 @@ MIT — انظر ملف [LICENSE](LICENSE) للتفاصيل.
 
 ---
 
+### ⚙️ تنظیمات فونت (اختیاری)
+
+می‌توانید فونت‌های مورد استفاده Claude Code را از طریق `settings.json` ‏(`Ctrl+,` / `Cmd+,` ← جستجو کنید `claude-code-rtl`) سفارشی کنید:
+
+| تنظیم | توضیح | نمونه‌ها |
+|---|---|---|
+| `claude-code-rtl.textFont` | فونت پیام‌ها و فیلد ورودی | `Vazirmatn`, `Tahoma` |
+| `claude-code-rtl.codeFont` | فونت بلوک‌های کد و ویرایشگر diff | `JetBrains Mono`, `Fira Code` |
+
+```jsonc
+{
+  "claude-code-rtl.textFont": "Vazirmatn",
+  "claude-code-rtl.codeFont": "JetBrains Mono"
+}
+```
+
+> 💡 **برای کاربران فارسی‌زبان:** فونت `Vazirmatn` به‌شدت توصیه می‌شود تا اعداد و حروف فارسی به‌درستی نمایش داده شوند — می‌توانید آن را از [vazirmatn.rastikerdar.com](https://vazirmatn.rastikerdar.com/) نصب کنید.
+>
+> 💡 هر تنظیم را خالی بگذارید تا فونت پیش‌فرض Claude Code حفظ شود.
+>
+> 🔄 پس از تغییر تنظیم فونت، یک اعلان نمایش داده می‌شود تا پنجره را بارگذاری مجدد کنید و CSS جدید اعمال شود.
+
+---
+
 ### 🔧 عیب‌یابی
 
 <details>
-<summary><strong>❓ افزونه را در Cursor یا Antigravity پیدا نمی‌کنید</strong></summary>
+<summary><strong>❓ افزونه را در Cursor، Antigravity یا Kiro پیدا نمی‌کنید</strong></summary>
 
 - افزونه را با شناسه آن جستجو کنید: `claude-code-rtl`
 - نام کامل "Claude Code RTL Support" ممکن است در نتایج جستجوی همه پلتفرم‌ها نمایش داده نشود

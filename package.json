@@ -1,8 +1,8 @@
 {
   "name": "claude-code-rtl",
   "displayName": "Claude Code RTL Support",
-  "description": "Adds RTL (Right-to-Left) text support for Hebrew, Arabic and Persian to Claude Code in VS Code, Cursor and Antigravity",
-  "version": "0.3.9",
+  "description": "Adds RTL (Right-to-Left) text support for Hebrew, Arabic and Persian to Claude Code in VS Code, Cursor, Antigravity and Kiro",
+  "version": "0.4.0",
   "publisher": "yechielby",
   "license": "MIT",
   "homepage": "https://github.com/YechielBy/claude-code-rtl-extension#readme",
@@ -35,6 +35,10 @@
     "antigravity-extension",
     "antigravity-ide",
     "antigravity-plugin",
+    "kiro",
+    "kiro-extension",
+    "kiro-ide",
+    "kiro-plugin",
     "farsi",
     "farsi-language",
     "hebrew",
@@ -66,6 +70,21 @@
   "icon": "claude-code-rtl-logo.png",
   "main": "./dist/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "Claude Code RTL",
+      "properties": {
+        "claude-code-rtl.textFont": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Font family for text/prose areas in Claude Code (e.g. `Vazirmatn`, `Tahoma`). Leave empty to keep Claude Code's default font."
+        },
+        "claude-code-rtl.codeFont": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Font family for code blocks in Claude Code (e.g. `JetBrains Mono`, `Fira Code`). Leave empty to keep Claude Code's default font."
+        }
+      }
+    },
     "commands": [
       {
         "command": "claude-rtl.add",

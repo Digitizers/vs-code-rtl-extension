@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.4.0
+
+- **Custom font settings** — Two new VS Code settings let you choose the fonts Claude Code uses:
+  - `claude-code-rtl.textFont` — font family for messages and the input box (e.g. `Vazirmatn`, `Tahoma`)
+  - `claude-code-rtl.codeFont` — font family for code blocks and diff editor (e.g. `JetBrains Mono`, `Fira Code`)
+  - Leave a setting blank to keep Claude Code's default font. Settings apply across Chat and Plan Preview.
+- **Kiro IDE support** — The extension now detects and supports Kiro alongside VS Code, Cursor, and Antigravity.
+
 ## v0.3.9
 
 - **Plan Preview RTL support** — Claude Code's new Plan Mode tab (separate editor tab for plans) now gets full RTL support. In Auto mode, the plan content is automatically detected and switched to RTL when it contains Hebrew, Arabic, or Persian text. In Active mode, a ⇄ toggle button appears. In Always mode, the plan is always RTL. Code blocks within plans stay LTR.

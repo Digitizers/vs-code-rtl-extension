@@ -358,6 +358,76 @@ const PERMISSION_RTL_JS = `
 })();
 `;
 
+// ── Font Options ──────────────────────────────────────────────────
+
+export interface FontOptions {
+    textFont: string;
+    codeFont: string;
+}
+
+export const NO_FONTS: FontOptions = { textFont: '', codeFont: '' };
+
+/** Generate font CSS for chat — applied universally (independent of RTL state). */
+function generateFontCss(fonts: FontOptions): string {
+    const parts: string[] = [];
+
+    if (fonts.textFont) {
+        parts.push(`
+/* Custom text font */
+[class*="root_"]:not([class*="thinkingContent_"] [class*="root_"]) > :is(p, ul, ol, h1, h2, h3, h4, blockquote),
+[class*="root_"]:not([class*="thinkingContent_"] [class*="root_"]) > :is(ul, ol) li,
+[class*="userMessage_"],
+[class*="content_"],
+[class*="messageInputContainer_"] [contenteditable],
+[class*="mentionMirror_"] {
+    font-family: "${fonts.textFont}", sans-serif !important;
+}`);
+    }
+
+    if (fonts.codeFont) {
+        parts.push(`
+/* Custom code font */
+pre,
+code,
+[class*="codeBlockWrapper_"] {
+    font-family: "${fonts.codeFont}", monospace !important;
+}
+
+/* Diff editor — Monaco sets font-family as inline style, needs !important */
+[class*="diffEditorWrapper_"] .view-lines,
+[class*="diffEditorWrapper_"] .view-overlays,
+[class*="diffEditorWrapper_"] .margin-view-overlays,
+[class*="diffEditorWrapper_"] .cursor,
+[class*="diffEditorWrapper_"] .inputarea {
+    font-family: "${fonts.codeFont}", monospace !important;
+}`);
+    }
+
+    return parts.join('\n');
+}
+
+/** Generate font CSS for Plan Preview — scoped to #content (independent of RTL state). */
+function generatePlanFontCss(fonts: FontOptions): string {
+    const parts: string[] = [];
+
+    if (fonts.textFont) {
+        parts.push(`
+#content {
+    font-family: "${fonts.textFont}", sans-serif !important;
+}`);
+    }
+
+    if (fonts.codeFont) {
+        parts.push(`
+#content pre,
+#content code {
+    font-family: "${fonts.codeFont}", monospace !important;
+}`);
+    }
+
+    return parts.join('\n');
+}
+
 // ── CSS Assembly ──────────────────────────────────────────────────
 
 function assembleCss(modeMarker: string, parts: string[]): string {
@@ -369,27 +439,33 @@ ${RTL_END_MARKER}
 `;
 }
 
-/** Active mode — .YBYrtl prefix + toggle button */
-export const RTL_CSS_RULES = assembleCss(RTL_MODE_ACTIVE_MARKER, [
-    BUTTON_STYLES,
-    rtlContentRules(P),
-    ltrOverrideRules(P),
-]);
-
-/** Always mode — no prefix, no button */
-export function generateAlwaysCssRules(): string {
-    return assembleCss(RTL_MODE_ALWAYS_MARKER, [
-        rtlContentRules(''),
-        ltrOverrideRules(''),
+/** Active mode — .YBYrtl prefix + toggle button. Fonts are unscoped (orthogonal to RTL state). */
+export function generateActiveCssRules(fonts: FontOptions = NO_FONTS): string {
+    return assembleCss(RTL_MODE_ACTIVE_MARKER, [
+        BUTTON_STYLES,
+        rtlContentRules(P),
+        ltrOverrideRules(P),
+        generateFontCss(fonts),
     ]);
 }
 
-/** Auto mode — dedicated RTL rules (no descendant/self conflicts) + LTR overrides */
-export function generateAutoCssRules(): string {
+/** Always mode — no prefix, no button */
+export function generateAlwaysCssRules(fonts: FontOptions = NO_FONTS): string {
+    return assembleCss(RTL_MODE_ALWAYS_MARKER, [
+        rtlContentRules(''),
+        ltrOverrideRules(''),
+        generateFontCss(fonts),
+    ]);
+}
+
+/** Auto mode — dedicated RTL rules (no descendant/self conflicts) + LTR overrides.
+ *  Fonts are unscoped so they apply to all bubbles (including English-only) and the diff editor. */
+export function generateAutoCssRules(fonts: FontOptions = NO_FONTS): string {
     return assembleCss(RTL_MODE_AUTO_MARKER, [
         AUTO_RTL_RULES,
         ltrOverrideRules(P),
         PERMISSION_RTL_CSS,
+        generateFontCss(fonts),
     ]);
 }
 
@@ -555,25 +631,31 @@ const PLAN_RTL_ALWAYS_CSS = `
 }
 `;
 
-/** Assembled Plan Preview CSS for Active mode */
-export const PLAN_ACTIVE_CSS =
-    PLAN_CSS_START_MARKER + '\n' +
-    PLAN_BUTTON_CSS +
-    PLAN_RTL_SCOPED_CSS +
-    PLAN_CSS_END_MARKER;
+/** Assembled Plan Preview CSS for Active mode — fonts scoped to #content (not .YBYrtl) so they apply regardless of toggle state */
+export function generatePlanActiveCss(fonts: FontOptions = NO_FONTS): string {
+    return PLAN_CSS_START_MARKER + '\n' +
+        PLAN_BUTTON_CSS +
+        PLAN_RTL_SCOPED_CSS +
+        generatePlanFontCss(fonts) +
+        '\n' + PLAN_CSS_END_MARKER;
+}
 
 /** Assembled Plan Preview CSS for Always mode */
-export const PLAN_ALWAYS_CSS =
-    PLAN_CSS_START_MARKER + '\n' +
-    PLAN_RTL_ALWAYS_CSS +
-    PLAN_CSS_END_MARKER;
+export function generatePlanAlwaysCss(fonts: FontOptions = NO_FONTS): string {
+    return PLAN_CSS_START_MARKER + '\n' +
+        PLAN_RTL_ALWAYS_CSS +
+        generatePlanFontCss(fonts) +
+        '\n' + PLAN_CSS_END_MARKER;
+}
 
-/** Assembled Plan Preview CSS for Auto mode */
-export const PLAN_AUTO_CSS =
-    PLAN_CSS_START_MARKER + '\n' +
-    PLAN_BUTTON_CSS +
-    PLAN_RTL_SCOPED_CSS +
-    PLAN_CSS_END_MARKER;
+/** Assembled Plan Preview CSS for Auto mode — fonts always apply, RTL is per-content */
+export function generatePlanAutoCss(fonts: FontOptions = NO_FONTS): string {
+    return PLAN_CSS_START_MARKER + '\n' +
+        PLAN_BUTTON_CSS +
+        PLAN_RTL_SCOPED_CSS +
+        generatePlanFontCss(fonts) +
+        '\n' + PLAN_CSS_END_MARKER;
+}
 
 /** Plan Preview JS for Active mode — toggle button */
 export const PLAN_ACTIVE_JS =

@@ -2,10 +2,20 @@ import * as vscode from 'vscode';
 import { ClaudeExtensionInfo, RtlMode } from './types.js';
 import { findClaudeExtensions } from './finder.js';
 import { addRtl, addRtlAlways, addRtlAuto, removeRtl, fixBidi, getStatus } from './injector.js';
+import { FontOptions } from './content.js';
 import { createStatusBarItem, updateStatusBar, disposeStatusBar } from './statusBar.js';
 
 const STATE_MODE_KEY = 'rtl.mode';
 const STATE_VERSION_KEY = 'rtl.version';
+const CONFIG_NAMESPACE = 'claude-code-rtl';
+
+function getFontOptions(): FontOptions {
+    const cfg = vscode.workspace.getConfiguration(CONFIG_NAMESPACE);
+    return {
+        textFont: cfg.get<string>('textFont', '').trim(),
+        codeFont: cfg.get<string>('codeFont', '').trim(),
+    };
+}
 
 let outputChannel: vscode.OutputChannel;
 let globalState: vscode.Memento;
@@ -26,7 +36,7 @@ function getSavedMode(): RtlMode {
     return globalState.get<RtlMode>(STATE_MODE_KEY, 'inactive');
 }
 
-type InjectionAction = (ext: ClaudeExtensionInfo) => Promise<{ messages: string[]; changed: boolean }>;
+type InjectionAction = (ext: ClaudeExtensionInfo, fonts?: FontOptions) => Promise<{ messages: string[]; changed: boolean }>;
 
 async function handleMode(
     label: string,
@@ -44,9 +54,10 @@ async function handleMode(
     channel.clear();
     channel.appendLine(`${label}...\n`);
 
+    const fonts = getFontOptions();
     let anyChanged = false;
     for (const ext of extensions) {
-        const result = await action(ext);
+        const result = await action(ext, fonts);
         result.messages.forEach(m => channel.appendLine(m));
         if (result.changed) anyChanged = true;
     }
@@ -129,10 +140,10 @@ const MODE_ACTIONS: Record<string, InjectionAction> = {
     auto: addRtlAuto,
 };
 
-async function silentInject(extensions: ClaudeExtensionInfo[], action: InjectionAction): Promise<boolean> {
+async function silentInject(extensions: ClaudeExtensionInfo[], action: InjectionAction, fonts?: FontOptions): Promise<boolean> {
     let anyChanged = false;
     for (const ext of extensions) {
-        const result = await action(ext);
+        const result = await action(ext, fonts);
         if (result.changed) anyChanged = true;
     }
     return anyChanged;
@@ -178,7 +189,7 @@ async function autoReactivate(): Promise<void> {
                 await saveVersion();
                 // Re-inject with latest code
                 const action = MODE_ACTIONS[detectedMode];
-                if (action && await silentInject(extensions, action)) {
+                if (action && await silentInject(extensions, action, getFontOptions())) {
                     vscode.commands.executeCommand('workbench.action.reloadWindow');
                 }
                 return;
@@ -196,7 +207,7 @@ async function autoReactivate(): Promise<void> {
         await saveVersion();
         if (extensions.length === 0) return;
 
-        if (await silentInject(extensions, addRtl)) {
+        if (await silentInject(extensions, addRtl, getFontOptions())) {
             vscode.commands.executeCommand('workbench.action.reloadWindow');
         }
         return;
@@ -212,7 +223,7 @@ async function autoReactivate(): Promise<void> {
         if (extensions.length === 0) return;
 
         const action = MODE_ACTIONS[savedMode];
-        if (action && await silentInject(extensions, action)) {
+        if (action && await silentInject(extensions, action, getFontOptions())) {
             vscode.commands.executeCommand('workbench.action.reloadWindow');
         }
         return;
@@ -229,7 +240,31 @@ async function autoReactivate(): Promise<void> {
     if (!needsReinjection) return;
 
     const action = MODE_ACTIONS[savedMode];
-    if (action && await silentInject(extensions, action)) {
+    if (action && await silentInject(extensions, action, getFontOptions())) {
+        vscode.commands.executeCommand('workbench.action.reloadWindow');
+    }
+}
+
+/**
+ * Re-inject CSS when font settings change.
+ * Webview keeps old CSS in memory — show a reload prompt instead of forcing.
+ */
+async function handleFontSettingChange(): Promise<void> {
+    const savedMode = getSavedMode();
+    if (savedMode === 'inactive') return;
+
+    const extensions = await findClaudeExtensions();
+    if (extensions.length === 0) return;
+
+    const action = MODE_ACTIONS[savedMode];
+    if (!action) return;
+    if (!await silentInject(extensions, action, getFontOptions())) return;
+
+    const choice = await vscode.window.showInformationMessage(
+        'Claude RTL: font settings updated. Reload window to apply.',
+        'Reload Now',
+    );
+    if (choice === 'Reload Now') {
         vscode.commands.executeCommand('workbench.action.reloadWindow');
     }
 }
@@ -249,6 +284,12 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('claude-rtl.remove', handleRemove),
         vscode.commands.registerCommand('claude-rtl.status', handleStatus),
         vscode.commands.registerCommand('claude-rtl.showMenu', handleShowMenu),
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration(`${CONFIG_NAMESPACE}.textFont`) ||
+                e.affectsConfiguration(`${CONFIG_NAMESPACE}.codeFont`)) {
+                handleFontSettingChange().catch(err => console.error('RTL font update failed:', err));
+            }
+        }),
     );
 
     autoReactivate().catch(err => console.error('RTL auto-reactivation failed:', err));

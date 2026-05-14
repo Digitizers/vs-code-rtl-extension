@@ -4,13 +4,16 @@ import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
 import { ClaudeExtensionInfo } from './types.js';
 
+type Ide = 'vscode' | 'cursor' | 'antigravity' | 'kiro';
+
 /**
- * Detect whether we are running in VS Code, Cursor, or Antigravity.
+ * Detect whether we are running in VS Code, Cursor, Antigravity, or Kiro.
  */
-function detectIde(): 'vscode' | 'cursor' | 'antigravity' {
+function detectIde(): Ide {
     const appName = vscode.env.appName.toLowerCase();
     if (appName.includes('antigravity')) return 'antigravity';
     if (appName.includes('cursor')) return 'cursor';
+    if (appName.includes('kiro')) return 'kiro';
     return 'vscode';
 }
 
@@ -90,17 +93,18 @@ async function getWslLinuxHomes(): Promise<string[]> {
 /**
  * Build the list of directories to search for Claude Code extensions.
  */
-async function getSearchDirectories(ide: 'vscode' | 'cursor' | 'antigravity'): Promise<string[]> {
+async function getSearchDirectories(ide: Ide): Promise<string[]> {
     const platform = process.platform;
     const dirs: string[] = [];
 
-    const ideDirMap: Record<string, { local: string; server: string }> = {
+    const ideDirMap: Record<Ide, { local: string; server: string }> = {
         vscode: { local: '.vscode', server: '.vscode-server' },
         cursor: { local: '.cursor', server: '.cursor-server' },
         antigravity: { local: '.antigravity', server: '.antigravity-server' },
+        kiro: { local: '.kiro', server: '.kiro-server' },
     };
 
-    const addExtDirs = (home: string, ide: 'vscode' | 'cursor' | 'antigravity') => {
+    const addExtDirs = (home: string, ide: Ide) => {
         const { local, server } = ideDirMap[ide];
         dirs.push(path.join(home, local, 'extensions'));
         dirs.push(path.join(home, server, 'extensions'));
