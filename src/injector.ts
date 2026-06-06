@@ -1,4 +1,5 @@
 import * as fs from 'fs/promises';
+import * as path from 'path';
 import { ClaudeExtensionInfo, RtlStatus } from './types.js';
 import {
     RTL_JS_CODE,
@@ -26,6 +27,82 @@ async function exists(p: string): Promise<boolean> {
         return true;
     } catch {
         return false;
+    }
+}
+
+// ── Concurrency-safe file IO ──────────────────────────────────────
+
+function delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Run `fn` while holding an exclusive lock file in `lockDir`.
+ *
+ * Every open IDE window runs its own extension host, and they all patch the
+ * SAME Claude Code files on disk. Without serialization their copyFile + read +
+ * write calls interleave and produce a torn/truncated file (observed: index.js
+ * shrinking from 4.8 MB to ~1 MB, which blanks the Claude panel). This lock
+ * guarantees one injection at a time per extension directory, across windows
+ * and processes.
+ *
+ * The lock is best-effort: a stale lock (older than STALE_MS, e.g. from a
+ * crashed window) is broken, and after MAX_WAIT_MS we proceed anyway rather
+ * than hang the extension forever.
+ */
+async function withFileLock<T>(lockDir: string, fn: () => Promise<T>): Promise<T> {
+    const lockPath = path.join(lockDir, '.ybyrtl.lock');
+    const STALE_MS = 30_000;
+    const RETRY_MS = 100;
+    const MAX_WAIT_MS = 20_000;
+
+    let handle: fs.FileHandle | undefined;
+    const start = Date.now();
+    while (true) {
+        try {
+            handle = await fs.open(lockPath, 'wx'); // exclusive create — fails if held
+            await handle.writeFile(String(process.pid));
+            break;
+        } catch (e) {
+            const err = e as NodeJS.ErrnoException;
+            if (err.code !== 'EEXIST') throw err;
+            try {
+                const st = await fs.stat(lockPath);
+                if (Date.now() - st.mtimeMs > STALE_MS) {
+                    await fs.rm(lockPath, { force: true });
+                    continue; // retry immediately after breaking a stale lock
+                }
+            } catch {
+                continue; // lock vanished between open and stat — retry
+            }
+            if (Date.now() - start > MAX_WAIT_MS) break; // proceed unlocked rather than hang
+            await delay(RETRY_MS);
+        }
+    }
+
+    try {
+        return await fn();
+    } finally {
+        if (handle) {
+            await handle.close().catch(() => { /* ignore */ });
+            await fs.rm(lockPath, { force: true }).catch(() => { /* ignore */ });
+        }
+    }
+}
+
+/**
+ * Write a file atomically: write to a unique temp file, then rename over the
+ * target. rename(2) is atomic on POSIX, so a reader (or a racing window) never
+ * observes a half-written file.
+ */
+async function atomicWrite(filePath: string, data: string): Promise<void> {
+    const tmpPath = `${filePath}.ybytmp.${process.pid}`;
+    try {
+        await fs.writeFile(tmpPath, data, 'utf-8');
+        await fs.rename(tmpPath, filePath);
+    } catch (e) {
+        await fs.rm(tmpPath, { force: true }).catch(() => { /* ignore */ });
+        throw e;
     }
 }
 
@@ -133,7 +210,17 @@ async function injectFile(
             messages.push(`  ${label}: Removed bidi-override rule`);
         }
 
-        await fs.writeFile(filePath, content + '\n' + injectedContent, 'utf-8');
+        const newContent = content + '\n' + injectedContent;
+        // Corruption guard: injection only ADDS content, so the result must be
+        // at least as large as the pristine backup. A smaller result means we
+        // read a torn file (e.g. a racing window truncated it) — abort without
+        // writing so the good backup is preserved.
+        const backupBytes = (await fs.stat(backupPath)).size;
+        if (Buffer.byteLength(newContent, 'utf-8') < backupBytes) {
+            messages.push(`  ${label}: Aborted — result (${Buffer.byteLength(newContent, 'utf-8')}B) smaller than backup (${backupBytes}B); corruption guard, file left untouched`);
+            return false;
+        }
+        await atomicWrite(filePath, newContent);
         return true;
     } catch (e: unknown) {
         const err = e as NodeJS.ErrnoException;
@@ -240,7 +327,15 @@ async function injectPlanPreview(
             }
         }
 
-        await fs.writeFile(extensionJsPath, content, 'utf-8');
+        // Corruption guard: Plan Preview injection only inserts content, so the
+        // result must be at least as large as the pristine backup. Bail out on a
+        // smaller result rather than persist a torn extension.js.
+        const backupBytes = (await fs.stat(backupPath)).size;
+        if (Buffer.byteLength(content, 'utf-8') < backupBytes) {
+            messages.push(`  Plan: Aborted — result (${Buffer.byteLength(content, 'utf-8')}B) smaller than backup (${backupBytes}B); corruption guard, file left untouched`);
+            return false;
+        }
+        await atomicWrite(extensionJsPath, content);
         messages.push('  Plan: RTL CSS injected into Plan Preview');
         return true;
     } catch (e: unknown) {
@@ -304,7 +399,7 @@ export async function getStatus(extensions: ClaudeExtensionInfo[]): Promise<RtlS
 /**
  * Add RTL support (Active mode) — CSS with .YBYrtl class + toggle button JS.
  */
-export async function addRtl(ext: ClaudeExtensionInfo, fonts?: FontOptions): Promise<InjectionResult> {
+async function addRtlImpl(ext: ClaudeExtensionInfo, fonts?: FontOptions): Promise<InjectionResult> {
     const messages: string[] = [];
     let changed = false;
 
@@ -330,7 +425,7 @@ export async function addRtl(ext: ClaudeExtensionInfo, fonts?: FontOptions): Pro
 /**
  * Add RTL "Always" mode — CSS without .YBYrtl class, no JS button.
  */
-export async function addRtlAlways(ext: ClaudeExtensionInfo, fonts?: FontOptions): Promise<InjectionResult> {
+async function addRtlAlwaysImpl(ext: ClaudeExtensionInfo, fonts?: FontOptions): Promise<InjectionResult> {
     const messages: string[] = [];
     let changed = false;
 
@@ -358,7 +453,7 @@ export async function addRtlAlways(ext: ClaudeExtensionInfo, fonts?: FontOptions
 /**
  * Add RTL "Auto" mode — per-element Hebrew detection via JS MutationObserver.
  */
-export async function addRtlAuto(ext: ClaudeExtensionInfo, fonts?: FontOptions): Promise<InjectionResult> {
+async function addRtlAutoImpl(ext: ClaudeExtensionInfo, fonts?: FontOptions): Promise<InjectionResult> {
     const messages: string[] = [];
     let changed = false;
 
@@ -385,17 +480,17 @@ export async function addRtlAuto(ext: ClaudeExtensionInfo, fonts?: FontOptions):
  * Add RTL support and fix BiDi issue by removing the bidi-override rule.
  * Preserves the current mode.
  */
-export async function fixBidi(ext: ClaudeExtensionInfo, fonts?: FontOptions): Promise<InjectionResult> {
+async function fixBidiImpl(ext: ClaudeExtensionInfo, fonts?: FontOptions): Promise<InjectionResult> {
     const currentlyAuto = await isAutoMode(ext.cssPath);
     const currentlyAlways = !currentlyAuto && await isAlwaysMode(ext.cssPath);
-    const result = currentlyAuto ? await addRtlAuto(ext, fonts) : currentlyAlways ? await addRtlAlways(ext, fonts) : await addRtl(ext, fonts);
+    const result = currentlyAuto ? await addRtlAutoImpl(ext, fonts) : currentlyAlways ? await addRtlAlwaysImpl(ext, fonts) : await addRtlImpl(ext, fonts);
 
     // After injection, remove the bidi-override rule if still present
     try {
         const content = await fs.readFile(ext.cssPath, 'utf-8');
         if (content.includes(BIDI_OVERRIDE)) {
             const fixed = content.replace(BIDI_OVERRIDE, '');
-            await fs.writeFile(ext.cssPath, fixed, 'utf-8');
+            await atomicWrite(ext.cssPath, fixed);
             result.messages.push(`  CSS: Removed bidi-override rule`);
         }
     } catch (e: unknown) {
@@ -434,7 +529,7 @@ async function removeInjected(
     try {
         const content = await fs.readFile(filePath, 'utf-8');
         const cleaned = stripBlock(content, startMarker, endMarker);
-        await fs.writeFile(filePath, cleaned, 'utf-8');
+        await atomicWrite(filePath, cleaned);
         messages.push(`  ${label}: RTL removed from ${extName}`);
         return true;
     } catch (e: unknown) {
@@ -446,7 +541,7 @@ async function removeInjected(
 /**
  * Remove RTL support from a single Claude Code extension.
  */
-export async function removeRtl(ext: ClaudeExtensionInfo): Promise<InjectionResult> {
+async function removeRtlImpl(ext: ClaudeExtensionInfo): Promise<InjectionResult> {
     const messages: string[] = [];
     let changed = false;
 
@@ -469,4 +564,31 @@ export async function removeRtl(ext: ClaudeExtensionInfo): Promise<InjectionResu
     }
 
     return { messages, changed };
+}
+
+// ── Public, lock-serialized entry points ──────────────────────────
+//
+// Every mutating operation runs under a per-extension-directory lock so that
+// concurrent IDE windows can't interleave their read-modify-write cycles and
+// corrupt the shared Claude Code files. The *Impl functions above stay
+// lock-free so fixBidi can compose them without deadlocking on the lock.
+
+export function addRtl(ext: ClaudeExtensionInfo, fonts?: FontOptions): Promise<InjectionResult> {
+    return withFileLock(ext.dir, () => addRtlImpl(ext, fonts));
+}
+
+export function addRtlAlways(ext: ClaudeExtensionInfo, fonts?: FontOptions): Promise<InjectionResult> {
+    return withFileLock(ext.dir, () => addRtlAlwaysImpl(ext, fonts));
+}
+
+export function addRtlAuto(ext: ClaudeExtensionInfo, fonts?: FontOptions): Promise<InjectionResult> {
+    return withFileLock(ext.dir, () => addRtlAutoImpl(ext, fonts));
+}
+
+export function fixBidi(ext: ClaudeExtensionInfo, fonts?: FontOptions): Promise<InjectionResult> {
+    return withFileLock(ext.dir, () => fixBidiImpl(ext, fonts));
+}
+
+export function removeRtl(ext: ClaudeExtensionInfo): Promise<InjectionResult> {
+    return withFileLock(ext.dir, () => removeRtlImpl(ext));
 }

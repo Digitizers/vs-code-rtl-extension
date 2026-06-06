@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.4.2
+
+- **Fix file corruption with multiple IDE windows open** — Each open IDE window runs its own extension host, and they all patch the *same* Claude Code files on disk. Their backup/read/write cycles could interleave and truncate a file — in one report `webview/index.js` shrank from 4.8 MB to ~1 MB, which left the Claude panel completely blank. Injection is now:
+  - **Serialized** with a per-extension-directory lock file, so only one window patches at a time (stale locks are auto-broken; the lock never hangs the extension).
+  - **Atomic** — files are written to a temp path and renamed into place, so a reader never sees a half-written file.
+  - **Guarded** — since injection only adds content, a result smaller than the pristine backup is rejected instead of written, preventing truncation from being persisted.
+- Added a concurrency regression test (`npm test`) that patches one extension from 8 simulated windows at once and asserts no truncation, no stacked injections, pristine backups, and clean removal.
+
 ## v0.4.1
 
 - **Fix Antigravity detection** — Antigravity renamed its data directory from `.antigravity` to `.antigravity-ide` in a recent release, so the extension could no longer find Claude Code's webview files and RTL stopped working. The finder now searches `.antigravity-ide` (and its server variant) first, falling back to the old `.antigravity` path for older installs.
