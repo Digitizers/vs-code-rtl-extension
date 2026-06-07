@@ -58,6 +58,7 @@ Six source files in `src/`:
 
 ## Publishing
 
-- Publisher: `yechielby` on VS Code Marketplace
-- Icon: `claude-code-rtl-logo.png` in root
+- Publisher: `Digitizers` on VS Code Marketplace
+- Icon: `rtl-support-logo.png` in root
 - VSIX built with `npm run package`
+- Auto-publish: push a `v*` git tag → `.github/workflows/publish.yml` builds and publishes to Marketplace + Open VSX (uses `VSCE_PAT` / `OVSX_PAT` repo secrets)

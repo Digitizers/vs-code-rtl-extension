@@ -1,17 +1,17 @@
 {
-  "name": "claude-code-rtl",
-  "displayName": "Claude Code RTL Support",
+  "name": "rtl-support",
+  "displayName": "RTL Support",
   "description": "Adds RTL (Right-to-Left) text support for Hebrew, Arabic and Persian to Claude Code in VS Code, Cursor, Antigravity and Kiro",
-  "version": "0.4.2",
-  "publisher": "yechielby",
+  "version": "0.4.3",
+  "publisher": "Digitizers",
   "license": "MIT",
-  "homepage": "https://github.com/YechielBy/claude-code-rtl-extension#readme",
+  "homepage": "https://github.com/Digitizers/vs-code-rtl-extension#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/YechielBy/claude-code-rtl-extension"
+    "url": "https://github.com/Digitizers/vs-code-rtl-extension"
   },
   "bugs": {
-    "url": "https://github.com/YechielBy/claude-code-rtl-extension/issues"
+    "url": "https://github.com/Digitizers/vs-code-rtl-extension/issues"
   },
   "engines": {
     "vscode": "^1.94.0"
@@ -62,12 +62,12 @@
   ],
   "badges": [
     {
-      "url": "https://img.shields.io/github/stars/YechielBy/claude-code-rtl-extension?style=social",
-      "href": "https://github.com/YechielBy/claude-code-rtl-extension/stargazers",
+      "url": "https://img.shields.io/github/stars/Digitizers/vs-code-rtl-extension?style=social",
+      "href": "https://github.com/Digitizers/vs-code-rtl-extension/stargazers",
       "description": "Star on GitHub"
     }
   ],
-  "icon": "claude-code-rtl-logo.png",
+  "icon": "rtl-support-logo.png",
   "main": "./dist/extension.js",
   "contributes": {
     "configuration": {

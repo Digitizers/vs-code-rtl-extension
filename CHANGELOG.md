@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.4.3
+
+- Maintenance release — published under the `Digitizers` publisher on the VS Code Marketplace and Open VSX (covers Cursor, Antigravity, and Kiro). No functional changes.
+
 ## v0.4.2
 
 - **Fix file corruption with multiple IDE windows open** — Each open IDE window runs its own extension host, and they all patch the *same* Claude Code files on disk. Their backup/read/write cycles could interleave and truncate a file — in one report `webview/index.js` shrank from 4.8 MB to ~1 MB, which left the Claude panel completely blank. Injection is now:

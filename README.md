@@ -1,21 +1,21 @@
-# <img src="claude-code-rtl-logo.png" alt="Claude Code RTL Logo" width="24">  Claude Code RTL Support
-### Adds Right-to-Left (`RTL`) text support for Hebrew, Arabic & Persian to `Claude Code` in VS Code, Cursor, Antigravity & Kiro.
+# <img src="rtl-support-logo.png" alt="RTL Support Logo" width="28">  RTL Support
+### Right-to-Left (`RTL`) text support for Hebrew, Arabic & Persian in `Claude Code` — VS Code, Cursor, Antigravity & Kiro.
 
 **Extends the official [Claude Code for VS Code](https://marketplace.visualstudio.com/items?itemName=anthropic.claude-code) extension**
 injects RTL CSS into the chat interface while keeping code blocks, tool output, and UI elements properly LTR.
 
 ![Enhancer](https://img.shields.io/badge/Add--on-Claude%20Code%20for%20VS%20Code-D97757?logo=claude&logoColor=D97757)
-![Version](https://img.shields.io/open-vsx/v/yechielby/claude-code-rtl?label=Version&color=c160ef)
+![Version](https://img.shields.io/open-vsx/v/Digitizers/rtl-support?label=Version&color=c160ef)
 ![IDE](https://img.shields.io/badge/IDE%20Support-VS%20Code%20/%20Cursor%20/%20Antigravity%20/%20Kiro-007ACC)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-> If you find this extension useful, please rate it on the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=yechielby.claude-code-rtl&ssr=false#review-details) or [Open VSX](https://open-vsx.org/extension/yechielby/claude-code-rtl/reviews), and [give it a ⭐ on GitHub](https://github.com/yechielby/claude-code-rtl-extension) — it helps others discover it!
+> If you find this extension useful, please rate it on the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=Digitizers.rtl-support&ssr=false#review-details) or [Open VSX](https://open-vsx.org/extension/Digitizers/rtl-support/reviews), and [give it a ⭐ on GitHub](https://github.com/Digitizers/vs-code-rtl-extension) — it helps others discover it!
 
 ---
 
-[![GitHub stars](https://img.shields.io/github/stars/yechielby/claude-code-rtl-extension?style=social)](https://github.com/yechielby/claude-code-rtl-extension)
-[![Open VSX Installs](https://img.shields.io/open-vsx/dt/yechielby/claude-code-rtl?label=Open%20VSX:%20downloads&color=c160ef)](https://open-vsx.org/extension/yechielby/claude-code-rtl)
-[![VS Code Marketplace Installs](https://img.shields.io/badge/VS%20Code%20Marketplace:%20downloads-%2B2.5k-107c10)](https://marketplace.visualstudio.com/items?itemName=yechielby.claude-code-rtl)
+[![GitHub stars](https://img.shields.io/github/stars/Digitizers/vs-code-rtl-extension?style=social)](https://github.com/Digitizers/vs-code-rtl-extension)
+[![Open VSX Installs](https://img.shields.io/open-vsx/dt/Digitizers/rtl-support?label=Open%20VSX:%20downloads&color=c160ef)](https://open-vsx.org/extension/Digitizers/rtl-support)
+[![VS Code Marketplace Installs](https://img.shields.io/visual-studio-marketplace/i/Digitizers.rtl-support?label=VS%20Code%20Marketplace:%20downloads&color=107c10)](https://marketplace.visualstudio.com/items?itemName=Digitizers.rtl-support)
 
 ## 🌐 Languages | שפות | اللغات | زبان‌ها
 
@@ -55,7 +55,7 @@ The original `Claude Code for VS Code` extension lacks native RTL support. This 
 - ❌ Difficulty reading mixed-language conversations (code + RTL text)
 - ❌ Inconsistent UI behavior in the chat panel
 
-**Claude Code RTL Support** fixes these issues by intelligently injecting CSS to handle text direction — while strictly preserving LTR for code blocks and terminal outputs.
+**RTL Support** fixes these issues by intelligently injecting CSS to handle text direction — while strictly preserving LTR for code blocks and terminal outputs.
 
 ### ✨ Features
 
@@ -235,7 +235,7 @@ Customize the fonts Claude Code uses by adding these to your `settings.json` (`C
 <summary><strong>❓ Can't find the plugin in Cursor, Antigravity or Kiro</strong></summary>
 
 - Search for the plugin by its ID: `claude-code-rtl`
-- The display name "Claude Code RTL Support" may not appear in search results on all platforms
+- The display name "RTL Support" may not appear in search results on all platforms
 - Use the exact ID `claude-code-rtl` in the extensions search bar
 
 </details>
@@ -298,7 +298,7 @@ A small community of independent developers maintains userland RTL fixes for the
 
 ### ⭐ Like it? Star it!
 
-If this extension helped you, please [give it a ⭐ on GitHub](https://github.com/yechielby/claude-code-rtl-extension) — it helps others discover it!
+If this extension helped you, please [give it a ⭐ on GitHub](https://github.com/Digitizers/vs-code-rtl-extension) — it helps others discover it!
 
 ---
 
@@ -328,7 +328,7 @@ MIT — see [LICENSE](LICENSE) for details.
 - ❌ קושי בקריאת שיחות בשפות מעורבות (קוד + טקסט RTL)
 - ❌ התנהגות ממשק לא עקבית בפאנל הצ'אט
 
-**Claude Code RTL Support** פותר בעיות אלה על ידי הזרקה חכמה של CSS לטיפול בכיווניות הטקסט — תוך שמירה קפדנית על LTR עבור בלוקי קוד ופלטי טרמינל.
+**RTL Support** פותר בעיות אלה על ידי הזרקה חכמה של CSS לטיפול בכיווניות הטקסט — תוך שמירה קפדנית על LTR עבור בלוקי קוד ופלטי טרמינל.
 
 ### ✨ תכונות
 
@@ -506,7 +506,7 @@ MIT — see [LICENSE](LICENSE) for details.
 <summary><strong>❓ לא מוצאים את התוסף ב-Cursor, Antigravity או Kiro</strong></summary>
 
 - חפשו את התוסף לפי המזהה שלו: `claude-code-rtl`
-- השם המלא "Claude Code RTL Support" לא תמיד מופיע בתוצאות חיפוש בכל הפלטפורמות
+- השם המלא "RTL Support" לא תמיד מופיע בתוצאות חיפוש בכל הפלטפורמות
 - השתמשו במזהה המדויק `claude-code-rtl` בשורת החיפוש של התוספים
 
 </details>
@@ -569,7 +569,7 @@ MIT — see [LICENSE](LICENSE) for details.
 
 ### ⭐ אהבתם? תנו כוכב!
 
-אם התוסף עזר לכם, [תנו לו ⭐ ב-GitHub](https://github.com/yechielby/claude-code-rtl-extension) — זה עוזר לאחרים לגלות אותו!
+אם התוסף עזר לכם, [תנו לו ⭐ ב-GitHub](https://github.com/Digitizers/vs-code-rtl-extension) — זה עוזר לאחרים לגלות אותו!
 
 ---
 
@@ -601,7 +601,7 @@ MIT — ראה קובץ [LICENSE](LICENSE) לפרטים.
 - ❌ صعوبة قراءة المحادثات متعددة اللغات (كود + نص RTL)
 - ❌ سلوك غير متسق لواجهة المستخدم في لوحة المحادثة
 
-**Claude Code RTL Support** تحل هذه المشكلات عن طريق حقن CSS بذكاء للتعامل مع اتجاه النص — مع الحفاظ الصارم على LTR لكتل الكود ومخرجات الطرفية.
+**RTL Support** تحل هذه المشكلات عن طريق حقن CSS بذكاء للتعامل مع اتجاه النص — مع الحفاظ الصارم على LTR لكتل الكود ومخرجات الطرفية.
 
 ### ✨ الميزات
 
@@ -781,7 +781,7 @@ MIT — ראה קובץ [LICENSE](LICENSE) לפרטים.
 <summary><strong>❓ لا يمكن العثور على الإضافة في Cursor أو Antigravity أو Kiro</strong></summary>
 
 - ابحث عن الإضافة باستخدام معرّفها: `claude-code-rtl`
-- الاسم الكامل "Claude Code RTL Support" قد لا يظهر في نتائج البحث على جميع المنصات
+- الاسم الكامل "RTL Support" قد لا يظهر في نتائج البحث على جميع المنصات
 - استخدم المعرّف الدقيق `claude-code-rtl` في شريط البحث عن الإضافات
 
 </details>
@@ -844,7 +844,7 @@ MIT — ראה קובץ [LICENSE](LICENSE) לפרטים.
 
 ### ⭐ أعجبتك؟ امنحها نجمة!
 
-إذا أعجبتك هذه الإضافة، [امنحها ⭐ على GitHub](https://github.com/yechielby/claude-code-rtl-extension) — هذا يساعد الآخرين في اكتشافها!
+إذا أعجبتك هذه الإضافة، [امنحها ⭐ على GitHub](https://github.com/Digitizers/vs-code-rtl-extension) — هذا يساعد الآخرين في اكتشافها!
 
 ---
 
@@ -876,7 +876,7 @@ MIT — انظر ملف [LICENSE](LICENSE) للتفاصيل.
 - ❌ دشواری در خواندن مکالمات چندزبانه (کد + متن RTL)
 - ❌ رفتار ناسازگار رابط کاربری در پنل چت
 
-**Claude Code RTL Support** این مشکلات را با تزریق هوشمند CSS برای مدیریت جهت متن حل می‌کند — در حالی که LTR را برای بلوک‌های کد و خروجی‌های ترمینال کاملاً حفظ می‌کند.
+**RTL Support** این مشکلات را با تزریق هوشمند CSS برای مدیریت جهت متن حل می‌کند — در حالی که LTR را برای بلوک‌های کد و خروجی‌های ترمینال کاملاً حفظ می‌کند.
 
 ### ✨ ویژگی‌ها
 
@@ -1056,7 +1056,7 @@ MIT — انظر ملف [LICENSE](LICENSE) للتفاصيل.
 <summary><strong>❓ افزونه را در Cursor، Antigravity یا Kiro پیدا نمی‌کنید</strong></summary>
 
 - افزونه را با شناسه آن جستجو کنید: `claude-code-rtl`
-- نام کامل "Claude Code RTL Support" ممکن است در نتایج جستجوی همه پلتفرم‌ها نمایش داده نشود
+- نام کامل "RTL Support" ممکن است در نتایج جستجوی همه پلتفرم‌ها نمایش داده نشود
 - از شناسه دقیق `claude-code-rtl` در نوار جستجوی افزونه‌ها استفاده کنید
 
 </details>
@@ -1119,7 +1119,7 @@ MIT — انظر ملف [LICENSE](LICENSE) للتفاصيل.
 
 ### ⭐ پسندیدید؟ ستاره بدهید!
 
-اگر این افزونه به شما کمک کرد، لطفاً [یک ⭐ در GitHub بدهید](https://github.com/yechielby/claude-code-rtl-extension) — این به دیگران کمک می‌کند آن را پیدا کنند!
+اگر این افزونه به شما کمک کرد، لطفاً [یک ⭐ در GitHub بدهید](https://github.com/Digitizers/vs-code-rtl-extension) — این به دیگران کمک می‌کند آن را پیدا کنند!
 
 ---
 
