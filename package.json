@@ -2,7 +2,7 @@
   "name": "claude-code-rtl",
   "displayName": "Claude Code RTL Support",
   "description": "Adds RTL (Right-to-Left) text support for Hebrew, Arabic and Persian to Claude Code in VS Code, Cursor, Antigravity and Kiro",
-  "version": "0.4.0",
+  "version": "0.4.2",
   "publisher": "yechielby",
   "license": "MIT",
   "homepage": "https://github.com/YechielBy/claude-code-rtl-extension#readme",
@@ -116,6 +116,8 @@
     "vscode:prepublish": "npm run build",
     "build": "node esbuild.mjs --production",
     "watch": "node esbuild.mjs --watch",
+    "pretest": "tsc -p tsconfig.test.json",
+    "test": "node test/concurrency.test.cjs",
     "package": "npx @vscode/vsce package"
   },
   "devDependencies": {
