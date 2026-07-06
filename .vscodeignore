@@ -6,6 +6,7 @@ node_modules/**
 tsconfig.json
 tsconfig.test.json
 test/**
+out-test/**
 esbuild.mjs
 **/*.map
 **/*.vsix
