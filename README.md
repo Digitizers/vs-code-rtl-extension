@@ -15,7 +15,7 @@ injects RTL CSS into the chat interface while keeping code blocks, tool output, 
 
 [![GitHub stars](https://img.shields.io/github/stars/yechielby/claude-code-rtl-extension?style=social)](https://github.com/yechielby/claude-code-rtl-extension)
 [![Open VSX Installs](https://img.shields.io/open-vsx/dt/yechielby/claude-code-rtl?label=Open%20VSX:%20downloads&color=c160ef)](https://open-vsx.org/extension/yechielby/claude-code-rtl)
-[![VS Code Marketplace Installs](https://img.shields.io/badge/VS%20Code%20Marketplace:%20downloads-%2B2.5k-107c10)](https://marketplace.visualstudio.com/items?itemName=yechielby.claude-code-rtl)
+[![VS Code Marketplace Installs](https://img.shields.io/badge/VS%20Code%20Marketplace:%20downloads-%2B10.5k-107c10)](https://marketplace.visualstudio.com/items?itemName=yechielby.claude-code-rtl)
 
 ## 🌐 Languages | שפות | اللغات | زبان‌ها
 
@@ -65,7 +65,6 @@ The original `Claude Code for VS Code` extension lacks native RTL support. This 
 | 📌 Activate RTL (Always) | Permanently enables RTL without a toggle button |
 | 👁️ Activate RTL (Auto) | Auto-detects Hebrew/Arabic/Persian per bubble and sets direction **(Recommended)** |
 | ➡️ Force LTR (Always) | Forces left-to-right always — even for Hebrew/Arabic/Persian text |
-| 🔧 Fix BiDi | Activates RTL and fixes reversed text (e.g. "םולש" → "שלום") |
 | ⏹️ Deactivate RTL | Restores original files from backup |
 | 🔍 Check Status | Shows which installations have RTL enabled |
 | 📊 Status Bar | Shows current RTL state at a glance — click to manage |
@@ -166,7 +165,6 @@ Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS) and search for:
 | `Claude RTL: Activate RTL (Always)` | 📌 Enable RTL permanently without toggle button |
 | `Claude RTL: Activate RTL (Auto)` | 👁️ Auto-detect RTL per bubble **(Recommended)** |
 | `Claude RTL: Force LTR (Always)` | ➡️ Force left-to-right always, even for RTL text |
-| `Claude RTL: Fix BiDi` | 🔧 Activate RTL + fix bidirectional text issues |
 | `Claude RTL: Deactivate RTL` | ⏹️ Disable RTL and restore original files |
 | `Claude RTL: Check Status` | 🔍 View installation status |
 
@@ -271,15 +269,6 @@ Customize the fonts Claude Code uses by adding these to your `settings.json` (`C
 </details>
 
 <details>
-<summary><strong>❓ Hebrew/Arabic text appears reversed (e.g. "םולש" instead of "שלום")</strong></summary>
-
-- This is caused by a `bidi-override` CSS rule in Claude Code that forces LTR direction on all text
-- Use **Claude RTL: Fix BiDi** instead of **Activate RTL** to fix this
-- Note: Running **Activate RTL** again will bring back the issue — use **Fix BiDi** each time
-
-</details>
-
-<details>
 <summary><strong>❓ Permission Denied error</strong></summary>
 
 - **Windows:** Try running VS Code as Administrator
@@ -295,7 +284,7 @@ A small community of independent developers maintains userland RTL fixes for the
 
 - **[Adaptive-RTL-Extension](https://github.com/Lidor-Mashiach/Adaptive-RTL-Extension)** by Lidor Mashiach — generic browser extension with click-to-select RTL for any web page, including LLM chat UIs (Claude.ai, ChatGPT, Gemini, etc.).
 - **[Claude.ai RTL Support (Chrome extension)](https://chromewebstore.google.com/detail/claude-ai-rtl-support/lkopcjdmfmffphbomfhecalbojiaeape)** — Chrome extension purpose-built for the Claude.ai web UI specifically. Lighter than the generic adaptive one if you only need RTL on Claude's website.
-- **[rtl-for-vs-code-agents](https://github.com/GuyRonnen/rtl-for-vs-code-agents)** by Guy Ronnen — VS Code extension covering the broader agent webview layer: GitHub Copilot, Cursor, Antigravity, Gemini Code Assist. Complementary to this extension's IDE-panel-specific fix.
+- **[claude-desktop-rtl-patch](https://github.com/shraga100/claude-desktop-rtl-patch)** by shraga100 — CSS patch for the standalone Claude Desktop app on Windows. Auto-detects RTL text in responses and the input box, keeps code blocks, tables, and math LTR, and fixes the flipped window UI on Hebrew/Arabic Windows systems.
 - **[Claude-for-word-RTL-fix](https://github.com/asaf-aizone/Claude-for-word-RTL-fix)** by Asaf Aizone — Hebrew/Arabic RTL fix for the Claude for Microsoft Office (Word/Excel/PowerPoint) add-in.
 - **[kivun-terminal-wsl](https://github.com/noambrand/kivun-terminal-wsl)** by Noam Brand — terminal-layer fix for the `claude` CLI itself: a `kivun-claude-bidi` Node wrapper for Claude Code's TUI output, plus a one-click installer for WSL2+Konsole on Windows or native shell installers on Linux.
 
@@ -342,7 +331,6 @@ MIT — see [LICENSE](LICENSE) for details.
 | ▶️ הפעלת RTL | מזריק עיצוב CSS וכפתור מתג לממשק הצ'אט |
 | 📌 הפעלת RTL (תמיד) | מפעיל RTL לצמיתות ללא כפתור מתג |
 | 👁️ הפעלת RTL (אוטו) | מזהה אוטומטית עברית/ערבית/פרסית לכל בועה וקובע כיוון **(מומלץ)** |
-| 🔧 תיקון BiDi | מפעיל RTL ומתקן טקסט הפוך (למשל "םולש" → "שלום") |
 | ⏹️ כיבוי RTL | משחזר קבצים מקוריים מגיבוי |
 | 🔍 בדיקת סטטוס | מציג אילו התקנות פועלות עם RTL |
 | 📊 שורת מצב | מציג את המצב הנוכחי בתחתית המסך — לחץ לניהול |
@@ -441,7 +429,6 @@ MIT — see [LICENSE](LICENSE) for details.
 | `Claude RTL: Activate RTL` | ▶️ הפעלת תמיכת RTL עם כפתור מתג |
 | `Claude RTL: Activate RTL (Always)` | 📌 הפעלת RTL לצמיתות ללא כפתור מתג |
 | `Claude RTL: Activate RTL (Auto)` | 👁️ זיהוי אוטומטי של RTL לכל בועה **(מומלץ)** |
-| `Claude RTL: Fix BiDi` | 🔧 הפעלת RTL + תיקון בעיות טקסט דו-כיווני |
 | `Claude RTL: Deactivate RTL` | ⏹️ כיבוי ושחזור קבצים מקוריים |
 | `Claude RTL: Check Status` | 🔍 הצגת מצב ההתקנה |
 
@@ -542,15 +529,6 @@ MIT — see [LICENSE](LICENSE) for details.
 </details>
 
 <details>
-<summary><strong>❓ טקסט עברי/ערבי מופיע הפוך (למשל "םולש" במקום "שלום")</strong></summary>
-
-- זה נגרם על ידי כלל `bidi-override` ב-CSS של Claude Code שכופה כיוון LTR על כל הטקסט
-- השתמש ב-**Claude RTL: Fix BiDi** במקום **Activate RTL** כדי לתקן את זה
-- שים לב: הפעלת **Activate RTL** שוב תחזיר את הבעיה — השתמש ב-**Fix BiDi** בכל פעם
-
-</details>
-
-<details>
 <summary><strong>❓ שגיאת הרשאות</strong></summary>
 
 - **Windows:** נסה להריץ את VS Code כמנהל מערכת
@@ -566,7 +544,7 @@ MIT — see [LICENSE](LICENSE) for details.
 
 - **[Adaptive-RTL-Extension](https://github.com/Lidor-Mashiach/Adaptive-RTL-Extension)** (מאת Lidor Mashiach) — תוסף דפדפן כללי עם בחירת RTL בלחיצה לכל דף אינטרנט, כולל ממשקי צ'אט של LLM (כמו Claude.ai, ChatGPT, Gemini ועוד).
 - **[Claude.ai RTL Support (Chrome extension)](https://chromewebstore.google.com/detail/claude-ai-rtl-support/lkopcjdmfmffphbomfhecalbojiaeape)** — תוסף כרום ייעודי לממשק הרשת של Claude.ai. קליל יותר מהתוסף הכללי אם אתם צריכים RTL רק לאתר של Claude.
-- **[rtl-for-vs-code-agents](https://github.com/GuyRonnen/rtl-for-vs-code-agents)** (מאת Guy Ronnen) — תוסף ל-VS Code המכסה את שכבת ה-webview הרחבה יותר של סוכני AI: כמו GitHub Copilot, Cursor, Antigravity, Gemini Code Assist. משלים את התיקון הספציפי של התוסף הזה.
+- **[claude-desktop-rtl-patch](https://github.com/shraga100/claude-desktop-rtl-patch)** (מאת shraga100) — פאץ' CSS לאפליקציית Claude Desktop העצמאית ל-Windows. מזהה אוטומטית טקסט RTL בתשובות ובשדה הקלט, שומר בלוקי קוד, טבלאות ונוסחאות מתמטיות ב-LTR, ומתקן את בעיית ממשק החלון ההפוך על מערכות Windows בעברית/ערבית.
 - **[Claude-for-word-RTL-fix](https://github.com/asaf-aizone/Claude-for-word-RTL-fix)** (מאת Asaf Aizone) — תיקון RTL (עברית/ערבית) לתוסף Claude עבור Microsoft Office (Word/Excel/PowerPoint).
 - **[kivun-terminal-wsl](https://github.com/noambrand/kivun-terminal-wsl)** (מאת Noam Brand) — תיקון ברמת הטרמינל עבור ה-CLI של `claude` עצמו: מעטפת Node בשם `kivun-claude-bidi` לפלט ה-TUI של Claude Code, בתוספת מתקין בקליק אחד עבור WSL2+Konsole ב-Windows או מתקיני shell מובנים ב-Linux.
 
@@ -615,7 +593,6 @@ MIT — ראה קובץ [LICENSE](LICENSE) לפרטים.
 | ▶️ تفعيل RTL | تحقن تنسيقات CSS وزر تبديل في واجهة المحادثة |
 | 📌 تفعيل RTL (دائم) | تفعيل RTL بشكل دائم بدون زر تبديل |
 | 👁️ تفعيل RTL (تلقائي) | كشف تلقائي للعربية/العبرية/الفارسية لكل فقاعة وتحديد الاتجاه **(موصى به)** |
-| 🔧 إصلاح BiDi | تفعيل RTL وإصلاح النص المعكوس (مثل "ملاس" → "سلام") |
 | ⏹️ إيقاف RTL | تستعيد الملفات الأصلية من النسخ الاحتياطية |
 | 🔍 فحص الحالة | يعرض التثبيتات التي تعمل بـ RTL |
 | 📊 شريط الحالة | يعرض الحالة الحالية في أسفل الشاشة — انقر للإدارة |
@@ -714,7 +691,6 @@ MIT — ראה קובץ [LICENSE](LICENSE) לפרטים.
 | `Claude RTL: Activate RTL` | ▶️ تفعيل دعم RTL مع زر تبديل |
 | `Claude RTL: Activate RTL (Always)` | 📌 تفعيل RTL بشكل دائم بدون زر تبديل |
 | `Claude RTL: Activate RTL (Auto)` | 👁️ كشف تلقائي لـ RTL لكل فقاعة **(موصى به)** |
-| `Claude RTL: Fix BiDi` | 🔧 تفعيل RTL + إصلاح مشاكل النص ثنائي الاتجاه |
 | `Claude RTL: Deactivate RTL` | ⏹️ إيقاف الدعم واستعادة الملفات الأصلية |
 | `Claude RTL: Check Status` | 🔍 عرض حالة التثبيت |
 
@@ -817,15 +793,6 @@ MIT — ראה קובץ [LICENSE](LICENSE) לפרטים.
 </details>
 
 <details>
-<summary><strong>❓ النص العربي/العبري يظهر معكوسًا (مثل "ملاس" بدلاً من "سلام")</strong></summary>
-
-- هذا بسبب قاعدة `bidi-override` في CSS الخاص بـ Claude Code التي تجبر اتجاه LTR على كل النص
-- استخدم **Claude RTL: Fix BiDi** بدلاً من **Activate RTL** لإصلاح هذا
-- ملاحظة: تشغيل **Activate RTL** مرة أخرى سيعيد المشكلة — استخدم **Fix BiDi** في كل مرة
-
-</details>
-
-<details>
 <summary><strong>❓ خطأ في الصلاحيات</strong></summary>
 
 - **Windows:** جرّب تشغيل VS Code كمسؤول
@@ -841,7 +808,7 @@ MIT — ראה קובץ [LICENSE](LICENSE) לפרטים.
 
 - **Adaptive-RTL-Extension** (بواسطة Lidor Mashiach) — إضافة متصفح عامة مع إمكانية تحديد RTL بنقرة لأي صفحة ويب، بما في ذلك واجهات محادثة LLM (مثل Claude.ai و ChatGPT و Gemini وغيرها).
 - **Claude.ai RTL Support (Chrome extension)** — إضافة كروم مخصصة لواجهة الويب Claude.ai. أخف من الإضافة العامة إذا كنت تحتاج فقط إلى RTL على موقع Claude.
-- **rtl-for-vs-code-agents** (بواسطة Guy Ronnen) — إضافة VS Code تغطي طبقة الـ webview الأوسع لوكلاء الذكاء الاصطناعي: GitHub Copilot، Cursor، Antigravity، Gemini Code Assist. تكمل هذا الإصلاح المخصص.
+- **[claude-desktop-rtl-patch](https://github.com/shraga100/claude-desktop-rtl-patch)** (بواسطة shraga100) — تصحيح CSS لتطبيق Claude Desktop المستقل على Windows. يكتشف تلقائيًا نص RTL في الردود ومربع الإدخال، ويحافظ على كتل الكود والجداول وصيغ الرياضيات بمحاذاة LTR، ويصلح مشكلة انعكاس واجهة النافذة على أنظمة Windows بالعربية/العبرية.
 - **Claude-for-word-RTL-fix** (بواسطة Asaf Aizone) — إصلاح RTL (عربي/عبري) لإضافة Claude لبرامج Microsoft Office (Word/Excel/PowerPoint).
 - **kivun-terminal-wsl** (بواسطة Noam Brand) — إصلاح على مستوى الطرفية (Terminal) لـ CLI الخاص بـ `claude` نفسه: غلاف Node يسمى `kivun-claude-bidi` لمخرجات TUI الخاصة بـ Claude Code، بالإضافة إلى مثبت بنقرة واحدة لـ WSL2+Konsole على Windows أو مثبتات shell الأصلية على Linux.
 
@@ -890,7 +857,6 @@ MIT — انظر ملف [LICENSE](LICENSE) للتفاصيل.
 | ▶️ فعال‌سازی RTL | CSS و یک دکمه تغییر را به رابط چت تزریق می‌کند |
 | 📌 فعال‌سازی RTL (همیشه) | فعال‌سازی دائمی RTL بدون دکمه تغییر |
 | 👁️ فعال‌سازی RTL (خودکار) | شناسایی خودکار فارسی/عربی/عبری در هر حباب و تعیین جهت **(پیشنهادی)** |
-| 🔧 رفع BiDi | فعال‌سازی RTL و رفع متن معکوس (مثلاً "ملاس" → "سلام") |
 | ⏹️ غیرفعال‌سازی RTL | فایل‌های اصلی را از نسخه پشتیبان بازیابی می‌کند |
 | 🔍 بررسی وضعیت | نشان می‌دهد کدام نصب‌ها RTL فعال دارند |
 | 📊 نوار وضعیت | وضعیت فعلی RTL را نمایش می‌دهد — برای مدیریت کلیک کنید |
@@ -989,7 +955,6 @@ MIT — انظر ملف [LICENSE](LICENSE) للتفاصيل.
 | `Claude RTL: Activate RTL` | ▶️ فعال‌سازی پشتیبانی RTL با دکمه تغییر |
 | `Claude RTL: Activate RTL (Always)` | 📌 فعال‌سازی دائمی RTL بدون دکمه تغییر |
 | `Claude RTL: Activate RTL (Auto)` | 👁️ شناسایی خودکار RTL برای هر حباب **(پیشنهادی)** |
-| `Claude RTL: Fix BiDi` | 🔧 فعال‌سازی RTL + رفع مشکلات متن دوجهته |
 | `Claude RTL: Deactivate RTL` | ⏹️ غیرفعال‌سازی و بازیابی فایل‌های اصلی |
 | `Claude RTL: Check Status` | 🔍 نمایش وضعیت نصب |
 
@@ -1092,15 +1057,6 @@ MIT — انظر ملف [LICENSE](LICENSE) للتفاصيل.
 </details>
 
 <details>
-<summary><strong>❓ متن فارسی/عربی به صورت معکوس نمایش داده می‌شود</strong></summary>
-
-- این به دلیل قاعده `bidi-override` در CSS مربوط به Claude Code است که جهت LTR را بر همه متن‌ها اعمال می‌کند
-- به جای **Activate RTL** از **Claude RTL: Fix BiDi** استفاده کنید
-- توجه: اجرای مجدد **Activate RTL** مشکل را بازمی‌گرداند — هر بار از **Fix BiDi** استفاده کنید
-
-</details>
-
-<details>
 <summary><strong>❓ خطای مجوز</strong></summary>
 
 - **Windows:** VS Code را به عنوان Administrator اجرا کنید
@@ -1116,7 +1072,7 @@ MIT — انظر ملف [LICENSE](LICENSE) للتفاصيل.
 
 - **Adaptive-RTL-Extension** (توسط Lidor Mashiach) — افزونه مرورگر عمومی با امکان انتخاب RTL با کلیک برای هر صفحه وب، از جمله رابط‌های چت LLM (مانند Claude.ai، ChatGPT، Gemini و غیره).
 - **Claude.ai RTL Support (Chrome extension)** — افزونه کروم که به طور خاص برای رابط کاربری وب Claude.ai ساخته شده است. اگر فقط در سایت Claude به RTL نیاز دارید، از افزونه عمومی سبک‌تر است.
-- **rtl-for-vs-code-agents** (توسط Guy Ronnen) — افزونه VS Code که لایه گسترده‌تر webview نمایندگان هوش مصنوعی را پوشش می‌دهد: GitHub Copilot، Cursor، Antigravity، Gemini Code Assist. مکمل این اصلاح خاص است.
+- **[claude-desktop-rtl-patch](https://github.com/shraga100/claude-desktop-rtl-patch)** (توسط shraga100) — پچ CSS برای برنامه مستقل Claude Desktop در ویندوز. متن RTL را در پاسخ‌ها و فیلد ورودی به‌طور خودکار تشخیص می‌دهد، بلوک‌های کد، جداول و فرمول‌های ریاضی را در LTR نگه می‌دارد و مشکل معکوس شدن رابط پنجره در سیستم‌های ویندوز عبری/عربی را برطرف می‌کند.
 - **Claude-for-word-RTL-fix** (توسط Asaf Aizone) — اصلاح RTL (عربی/عبری) برای افزونه Claude در Microsoft Office (Word/Excel/PowerPoint).
 - **kivun-terminal-wsl** (توسط Noam Brand) — اصلاح در سطح ترمینال برای خود CLI `claude`: یک پوشش Node به نام `kivun-claude-bidi` برای خروجی TUI مربوط به Claude Code، به علاوه نصب‌کننده با یک کلیک برای WSL2+Konsole در ویندوز یا نصب‌کننده‌های بومی shell در لینوکس.
 

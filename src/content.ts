@@ -310,7 +310,7 @@ const AUTO_RTL_RULES = `
 }
 
 /* Prompt input container — no .YBYrtl ancestor in Auto mode, use #root
-   for specificity to override *{unicode-bidi:bidi-override} */
+   to keep specificity high enough to win against Claude Code's own rules */
 #root [class*="messageInputContainer_"] > * {
     unicode-bidi: plaintext;
     text-align: start;
@@ -861,6 +861,50 @@ export const RTL_AUTO_JS_CODE = `
             }
         }
     }).observe(root, { childList: true, subtree: true });
+})();
+
+/* BiDi Literal Stripper — removes visible "\\u200F"-style escape sequences the LLM sometimes emits verbatim */
+(function() {
+    var BIDI_LIT = /\\\\u200[EF]|\\\\u202[A-E]|\\\\u206[6-9]/g;
+    var SKIP_SEL = '[class*="codeBlockWrapper_"],pre,code';
+
+    function isInsideCode(node, stopAt) {
+        var p = node.parentNode;
+        while (p && p !== stopAt) {
+            if (p.matches && p.matches(SKIP_SEL)) return true;
+            p = p.parentNode;
+        }
+        return false;
+    }
+
+    function clean(scope) {
+        if (!scope) return;
+        var walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, null);
+        var n;
+        while ((n = walker.nextNode())) {
+            var val = n.nodeValue;
+            /* fast path — skip text nodes without a backslash-u */
+            if (!val || val.indexOf('\\\\u') === -1) continue;
+            if (isInsideCode(n, scope)) continue;
+            var newVal = val.replace(BIDI_LIT, '');
+            if (newVal !== val) n.nodeValue = newVal;
+        }
+    }
+
+    var scanRoot = document.getElementById('root');
+    if (!scanRoot) return;
+
+    clean(scanRoot);
+
+    /* Debounced watcher — batches cleanup during heavy streaming */
+    var timer = null;
+    new MutationObserver(function() {
+        if (timer) return;
+        timer = setTimeout(function() {
+            timer = null;
+            clean(scanRoot);
+        }, 50);
+    }).observe(scanRoot, { childList: true, subtree: true, characterData: true });
 })();
 ${PERMISSION_RTL_JS}
 /* End RTL Toggle Button */

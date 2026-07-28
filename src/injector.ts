@@ -17,8 +17,6 @@ import {
     FontOptions,
 } from './content.js';
 
-const BIDI_OVERRIDE = '*{direction:ltr;unicode-bidi:bidi-override}';
-
 /**
  * Check if a path exists.
  */
@@ -120,42 +118,6 @@ export async function isCssInstalled(cssPath: string): Promise<boolean> {
 }
 
 /**
- * Check if CSS is in "always" mode (no .YBYrtl class dependency).
- */
-export async function isAlwaysMode(cssPath: string): Promise<boolean> {
-    try {
-        const content = await fs.readFile(cssPath, 'utf-8');
-        return content.includes(RTL_MODE_ALWAYS_MARKER);
-    } catch {
-        return false;
-    }
-}
-
-/**
- * Check if CSS is in "auto" mode (per-element RTL detection).
- */
-export async function isAutoMode(cssPath: string): Promise<boolean> {
-    try {
-        const content = await fs.readFile(cssPath, 'utf-8');
-        return content.includes(RTL_MODE_AUTO_MARKER);
-    } catch {
-        return false;
-    }
-}
-
-/**
- * Check if CSS is in "ltr" mode (force left-to-right always).
- */
-export async function isLtrMode(cssPath: string): Promise<boolean> {
-    try {
-        const content = await fs.readFile(cssPath, 'utf-8');
-        return content.includes(RTL_MODE_LTR_MARKER);
-    } catch {
-        return false;
-    }
-}
-
-/**
  * Check if JS toggle markers exist in the file.
  */
 async function isJsInstalled(jsPath: string | null): Promise<boolean> {
@@ -203,7 +165,6 @@ async function injectFile(
     injectedContent: string,
     label: string,
     messages: string[],
-    options?: { fixBidi?: boolean },
 ): Promise<boolean> {
     try {
         const backupPath = filePath + '.bak';
@@ -216,13 +177,7 @@ async function injectFile(
             messages.push(`  ${label}: Backup created: ${backupPath}`);
         }
 
-        let content = await fs.readFile(filePath, 'utf-8');
-
-        if (options?.fixBidi && content.includes(BIDI_OVERRIDE)) {
-            content = content.replace(BIDI_OVERRIDE, '');
-            messages.push(`  ${label}: Removed bidi-override rule`);
-        }
-
+        const content = await fs.readFile(filePath, 'utf-8');
         const newContent = content + '\n' + injectedContent;
         // Corruption guard: injection only ADDS content, so the result must be
         // at least as large as the pristine backup. A smaller result means we
@@ -443,7 +398,7 @@ async function addRtlAlwaysImpl(ext: ClaudeExtensionInfo, fonts?: FontOptions): 
     const messages: string[] = [];
     let changed = false;
 
-    if (await injectFile(ext.cssPath, generateAlwaysCssRules(fonts), 'CSS', messages, { fixBidi: true })) {
+    if (await injectFile(ext.cssPath, generateAlwaysCssRules(fonts), 'CSS', messages)) {
         messages.push(`  CSS: RTL Always support added to ${ext.name}`);
         changed = true;
     }
@@ -471,7 +426,7 @@ async function addRtlAutoImpl(ext: ClaudeExtensionInfo, fonts?: FontOptions): Pr
     const messages: string[] = [];
     let changed = false;
 
-    if (await injectFile(ext.cssPath, generateAutoCssRules(fonts), 'CSS', messages, { fixBidi: true })) {
+    if (await injectFile(ext.cssPath, generateAutoCssRules(fonts), 'CSS', messages)) {
         messages.push(`  CSS: RTL Auto support added to ${ext.name}`);
         changed = true;
     }
@@ -499,7 +454,7 @@ async function addLtrAlwaysImpl(ext: ClaudeExtensionInfo, fonts?: FontOptions): 
     const messages: string[] = [];
     let changed = false;
 
-    if (await injectFile(ext.cssPath, generateLtrCssRules(fonts), 'CSS', messages, { fixBidi: true })) {
+    if (await injectFile(ext.cssPath, generateLtrCssRules(fonts), 'CSS', messages)) {
         messages.push(`  CSS: LTR Always support added to ${ext.name}`);
         changed = true;
     }
@@ -518,31 +473,6 @@ async function addLtrAlwaysImpl(ext: ClaudeExtensionInfo, fonts?: FontOptions): 
     }
 
     return { messages, changed };
-}
-
-/**
- * Add RTL support and fix BiDi issue by removing the bidi-override rule.
- * Preserves the current mode.
- */
-async function fixBidiImpl(ext: ClaudeExtensionInfo, fonts?: FontOptions): Promise<InjectionResult> {
-    const currentlyAuto = await isAutoMode(ext.cssPath);
-    const currentlyLtr = !currentlyAuto && await isLtrMode(ext.cssPath);
-    const currentlyAlways = !currentlyAuto && !currentlyLtr && await isAlwaysMode(ext.cssPath);
-    const result = currentlyAuto ? await addRtlAutoImpl(ext, fonts) : currentlyLtr ? await addLtrAlwaysImpl(ext, fonts) : currentlyAlways ? await addRtlAlwaysImpl(ext, fonts) : await addRtlImpl(ext, fonts);
-
-    // After injection, remove the bidi-override rule if still present
-    try {
-        const content = await fs.readFile(ext.cssPath, 'utf-8');
-        if (content.includes(BIDI_OVERRIDE)) {
-            const fixed = content.replace(BIDI_OVERRIDE, '');
-            await atomicWrite(ext.cssPath, fixed);
-            result.messages.push(`  CSS: Removed bidi-override rule`);
-        }
-    } catch (e: unknown) {
-        result.messages.push(`  CSS: Error fixing BiDi: ${(e as Error).message}`);
-    }
-
-    return result;
 }
 
 // ── Removal ───────────────────────────────────────────────────────
@@ -615,8 +545,8 @@ async function removeRtlImpl(ext: ClaudeExtensionInfo): Promise<InjectionResult>
 //
 // Every mutating operation runs under a per-extension-directory lock so that
 // concurrent IDE windows can't interleave their read-modify-write cycles and
-// corrupt the shared Claude Code files. The *Impl functions above stay
-// lock-free so fixBidi can compose them without deadlocking on the lock.
+// corrupt the shared Claude Code files. The *Impl functions stay lock-free
+// so callers can compose them without deadlocking on the lock.
 
 export function addRtl(ext: ClaudeExtensionInfo, fonts?: FontOptions): Promise<InjectionResult> {
     return withFileLock(ext.dir, () => addRtlImpl(ext, fonts));
@@ -632,10 +562,6 @@ export function addRtlAuto(ext: ClaudeExtensionInfo, fonts?: FontOptions): Promi
 
 export function addLtrAlways(ext: ClaudeExtensionInfo, fonts?: FontOptions): Promise<InjectionResult> {
     return withFileLock(ext.dir, () => addLtrAlwaysImpl(ext, fonts));
-}
-
-export function fixBidi(ext: ClaudeExtensionInfo, fonts?: FontOptions): Promise<InjectionResult> {
-    return withFileLock(ext.dir, () => fixBidiImpl(ext, fonts));
 }
 
 export function removeRtl(ext: ClaudeExtensionInfo): Promise<InjectionResult> {

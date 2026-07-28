@@ -16,3 +16,4 @@ llms-small.txt
 test/**
 out-test/**
 tsconfig.test.json
+docs/**
