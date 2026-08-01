@@ -26,10 +26,6 @@ The extension adds an **⇄ toggle button** to the Claude Code chat header that 
 
 The input field automatically detects text direction based on the first character typed. Start with a Hebrew, Arabic, or Persian letter and the input flows RTL; start with English and it stays LTR.
 
-### Fix BiDi
-
-Claude Code sometimes injects a CSS rule (`*{direction:ltr;unicode-bidi:bidi-override}`) that causes RTL text to appear completely reversed (e.g., "םולש" instead of "שלום"). The **Fix BiDi** command activates RTL and removes this problematic rule.
-
 ### Auto-Reactivate
 
 When Claude Code updates, it replaces its files and RTL support is lost. This extension automatically detects that and re-injects RTL on the next startup — no manual action needed.
@@ -57,7 +53,6 @@ When Claude Code updates, it replaces its files and RTL support is lost. This ex
 | Claude RTL: Activate RTL | Enable RTL with ⇄ toggle button |
 | Claude RTL: Activate RTL (Always) | Enable RTL permanently |
 | Claude RTL: Activate RTL (Auto) | Enable auto-detection per bubble |
-| Claude RTL: Fix BiDi | Activate RTL + fix reversed text |
 | Claude RTL: Deactivate RTL | Disable RTL and restore original state |
 | Claude RTL: Check Status | Show current installation status |
 

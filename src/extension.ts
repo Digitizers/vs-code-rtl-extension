@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { ClaudeExtensionInfo, RtlMode } from './types.js';
 import { findClaudeExtensions } from './finder.js';
-import { addRtl, addRtlAlways, addRtlAuto, removeRtl, fixBidi, getStatus } from './injector.js';
+import { addRtl, addRtlAlways, addRtlAuto, addLtrAlways, removeRtl, getStatus } from './injector.js';
 import { FontOptions } from './content.js';
 import { createStatusBarItem, updateStatusBar, disposeStatusBar } from './statusBar.js';
 
@@ -72,13 +72,6 @@ async function handleMode(
     }
 }
 
-async function handleFixBidi(): Promise<void> {
-    // fixBidi preserves current mode; if was inactive, it activates as 'active'
-    const currentSaved = getSavedMode();
-    const mode = currentSaved === 'inactive' ? 'active' : currentSaved;
-    await handleMode('Activating RTL support with BiDi fix', mode, fixBidi);
-}
-
 async function handleRemove(): Promise<void> {
     await handleMode('Deactivating RTL support', 'inactive', removeRtl, 'RTL is already inactive.');
 }
@@ -120,7 +113,7 @@ async function handleShowMenu(): Promise<void> {
         { label: '$(check) Activate RTL', description: 'Enable RTL support with toggle button', command: 'claude-rtl.add' },
         { label: '$(pin) Activate RTL (Always)', description: 'Enable RTL permanently without toggle button', command: 'claude-rtl.addAlways' },
         { label: '$(eye) Activate RTL (Auto)', description: 'Auto-detect RTL text per paragraph and set direction', command: 'claude-rtl.addAuto' },
-        { label: '$(tools) Fix BiDi', description: 'Activate RTL and fix bidirectional text issues', command: 'claude-rtl.fixBidi' },
+        { label: '$(arrow-right) Force LTR (Always)', description: 'Force left-to-right always, even for Hebrew/Arabic/Persian text', command: 'claude-rtl.addLtr' },
         { label: '$(close) Deactivate RTL', description: 'Disable RTL support and restore original files', command: 'claude-rtl.remove' },
         { label: '$(info) Check Status', description: 'Show current RTL status', command: 'claude-rtl.status' },
     ];
@@ -138,6 +131,7 @@ const MODE_ACTIONS: Record<string, InjectionAction> = {
     active: addRtl,
     always: addRtlAlways,
     auto: addRtlAuto,
+    ltr: addLtrAlways,
 };
 
 async function silentInject(extensions: ClaudeExtensionInfo[], action: InjectionAction, fonts?: FontOptions): Promise<boolean> {
@@ -280,7 +274,7 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('claude-rtl.add', () => handleMode('Activating RTL support', 'active', addRtl)),
         vscode.commands.registerCommand('claude-rtl.addAlways', () => handleMode('Activating RTL Always mode', 'always', addRtlAlways)),
         vscode.commands.registerCommand('claude-rtl.addAuto', () => handleMode('Activating RTL Auto mode', 'auto', addRtlAuto)),
-        vscode.commands.registerCommand('claude-rtl.fixBidi', handleFixBidi),
+        vscode.commands.registerCommand('claude-rtl.addLtr', () => handleMode('Activating LTR Always mode', 'ltr', addLtrAlways)),
         vscode.commands.registerCommand('claude-rtl.remove', handleRemove),
         vscode.commands.registerCommand('claude-rtl.status', handleStatus),
         vscode.commands.registerCommand('claude-rtl.showMenu', handleShowMenu),

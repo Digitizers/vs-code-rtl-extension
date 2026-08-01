@@ -1,8 +1,12 @@
 # Changelog
 
-## v0.4.3
+## v0.5.0
 
-- Maintenance release — published under the `Digitizers` publisher on the VS Code Marketplace and Open VSX (covers Cursor, Antigravity, and Kiro). No functional changes.
+- **New: Force LTR (Always) mode** (`Claude RTL: Force LTR (Always)`) — pins the whole chat (messages, input box, question/permission dialogs, Plan Preview) to left-to-right, even when the conversation contains Hebrew, Arabic, or Persian text. The direction choice is now symmetric: users who want RTL pick an RTL mode, users who prefer a stable LTR layout while chatting in an RTL language pick LTR Always. Shown in the status bar as `LTR: Always` and available from the status-bar menu; survives Claude Code updates via auto-reactivate like the other modes. (Contributed by @moeseif in #19.)
+- **BiDi escape-code stripper (Auto mode)** — Claude sometimes emits BiDi control characters as visible 6-character escape sequences (e.g. `‏`, `‫`) inside its responses, dirtying the text with fragments like `‏backend‏`. Auto mode now silently strips these sequences from message text nodes as they render (including live-streamed replies), so the chat stays clean without a per-project CLAUDE.md workaround. Text inside code blocks is left untouched.
+- **Fix: English text right-alignment caused by BOM** — the RTL detection regex ended at `﻿` (Byte Order Mark), so Opus-model responses beginning with a BOM were mistakenly flagged as RTL and aligned right. The regex now ends at `﻾`, keeping all real RTL scripts covered while excluding the invisible BOM character. (Contributed by @yanivhrs in #18.)
+- **Removed: `Claude RTL: Fix BiDi` command** — the underlying `bidi-override` issue was resolved on Claude Code's side, so the command is no longer relevant.
+- Now published under the `Digitizers` publisher on the VS Code Marketplace and Open VSX.
 
 ## v0.4.2
 

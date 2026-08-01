@@ -2,7 +2,7 @@
   "name": "rtl-support",
   "displayName": "RTL Support",
   "description": "Adds RTL (Right-to-Left) text support for Hebrew, Arabic and Persian to Claude Code in VS Code, Cursor, Antigravity and Kiro",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "publisher": "Digitizers",
   "license": "MIT",
   "homepage": "https://github.com/Digitizers/vs-code-rtl-extension#readme",
@@ -99,12 +99,12 @@
         "title": "Claude RTL: Activate RTL (Auto)"
       },
       {
-        "command": "claude-rtl.remove",
-        "title": "Claude RTL: Deactivate RTL"
+        "command": "claude-rtl.addLtr",
+        "title": "Claude RTL: Force LTR (Always)"
       },
       {
-        "command": "claude-rtl.fixBidi",
-        "title": "Claude RTL: Fix BiDi"
+        "command": "claude-rtl.remove",
+        "title": "Claude RTL: Deactivate RTL"
       },
       {
         "command": "claude-rtl.status",
