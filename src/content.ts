@@ -16,6 +16,7 @@ export const JS_END_MARKER = '/* End RTL Toggle Button */';
 export const RTL_MODE_ACTIVE_MARKER = '/* RTL-MODE: active */';
 export const RTL_MODE_ALWAYS_MARKER = '/* RTL-MODE: always */';
 export const RTL_MODE_AUTO_MARKER = '/* RTL-MODE: auto */';
+export const RTL_MODE_LTR_MARKER = '/* RTL-MODE: ltr */';
 
 // ── CSS Building Blocks ───────────────────────────────────────────
 
@@ -203,6 +204,72 @@ ${p}[class*="thinkingContent_"] [class*="root_"] :is(ul, ol, li) {
 `;
 }
 
+/** Force-LTR content rules — unprefixed (LTR Always mode).
+ *  Pins every content surface to left-to-right, overriding the webview's
+ *  auto direction detection, so Hebrew/Arabic text renders in an LTR layout. */
+const LTR_CONTENT_RULES = `
+/* ==========================================
+   LTR - Force left-to-right always
+   ========================================== */
+
+/* Messages container — anchor all bubbles to the left edge */
+[class*="messagesContainer_"] {
+    direction: ltr;
+    align-items: flex-start !important;
+}
+
+/* User messages — pinned to the left, mirroring how RTL Always pins right */
+[class*="userMessage_"],
+[class*="userMessageContainer_"] {
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: left !important;
+    align-items: flex-start !important;
+    align-self: flex-start !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
+}
+
+[class*="content_"][class*="xGDvVg"],
+[class*="content_"] > span {
+    unicode-bidi: isolate;
+}
+
+/* Claude's markdown responses */
+[class*="root_"] {
+    direction: ltr;
+    unicode-bidi: isolate;
+}
+
+[class*="root_"] > :is(p, ul, ol, h1, h2, h3, h4, blockquote),
+[class*="root_"] > :is(ul, ol) li {
+    text-align: left;
+}
+
+/* Question/answer blocks */
+[class*="questionBlock_"],
+[class*="questionHeader_"],
+[class*="answerText_"],
+[class*="optionText_"],
+[class*="optionContent_"],
+[class*="optionLabel_"],
+[class*="optionDescription_"],
+[class*="permissionsContainer_"],
+[class*="permissionRequestContent_"] {
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: left;
+}
+
+/* Prompt input — force LTR instead of auto-detecting by first character */
+[class*="messageInputContainer_"] > *,
+[class*="otherInput_"] [contenteditable] {
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: left;
+}
+`;
+
 /** Auto mode RTL rules — .YBYrtl is on the bubble itself, not on #root.
  *  Uses descendant selectors from the bubble, plus self-matching for the bubble element. */
 const AUTO_RTL_RULES = `
@@ -243,7 +310,7 @@ const AUTO_RTL_RULES = `
 }
 
 /* Prompt input container — no .YBYrtl ancestor in Auto mode, use #root
-   for specificity to override *{unicode-bidi:bidi-override} */
+   to keep specificity high enough to win against Claude Code's own rules */
 #root [class*="messageInputContainer_"] > * {
     unicode-bidi: plaintext;
     text-align: start;
@@ -298,7 +365,7 @@ const PERMISSION_RTL_CSS = `
 /** JS for dynamic permission RTL detection — shared across all modes */
 const PERMISSION_RTL_JS = `
 (function() {
-    var PERM_RTL_RE = /[\\u0590-\\u05FF\\u0600-\\u06FF\\u0750-\\u077F\\uFB50-\\uFDFF\\uFE70-\\uFEFF]/;
+    var PERM_RTL_RE = /[\\u0590-\\u05FF\\u0600-\\u06FF\\u0750-\\u077F\\uFB50-\\uFDFF\\uFE70-\\uFEFE]/;
     var PERM_SEL = '[class*="permissionsContainer_"]';
 
     var LABEL_SEL = '[class*="optionLabel_"],[class*="optionDescription_"]';
@@ -465,6 +532,15 @@ export function generateAutoCssRules(fonts: FontOptions = NO_FONTS): string {
         AUTO_RTL_RULES,
         ltrOverrideRules(P),
         PERMISSION_RTL_CSS,
+        generateFontCss(fonts),
+    ]);
+}
+
+/** LTR Always mode — force left-to-right everywhere, no prefix, no button */
+export function generateLtrCssRules(fonts: FontOptions = NO_FONTS): string {
+    return assembleCss(RTL_MODE_LTR_MARKER, [
+        LTR_CONTENT_RULES,
+        ltrOverrideRules(''),
         generateFontCss(fonts),
     ]);
 }
@@ -648,6 +724,32 @@ export function generatePlanAlwaysCss(fonts: FontOptions = NO_FONTS): string {
         '\n' + PLAN_CSS_END_MARKER;
 }
 
+/** Plan Preview force-LTR rules — unscoped (LTR Always mode) */
+const PLAN_LTR_ALWAYS_CSS = `
+#content {
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: left;
+}
+#content th, #content td {
+    text-align: left;
+}
+#content pre,
+#content code {
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: left;
+}
+`;
+
+/** Assembled Plan Preview CSS for LTR Always mode */
+export function generatePlanLtrCss(fonts: FontOptions = NO_FONTS): string {
+    return PLAN_CSS_START_MARKER + '\n' +
+        PLAN_LTR_ALWAYS_CSS +
+        generatePlanFontCss(fonts) +
+        '\n' + PLAN_CSS_END_MARKER;
+}
+
 /** Assembled Plan Preview CSS for Auto mode — fonts always apply, RTL is per-content */
 export function generatePlanAutoCss(fonts: FontOptions = NO_FONTS): string {
     return PLAN_CSS_START_MARKER + '\n' +
@@ -680,7 +782,7 @@ export const PLAN_ACTIVE_JS =
 export const PLAN_AUTO_JS =
     PLAN_JS_START_MARKER + '\n' +
     `(function() {
-    var RTL_RE = /[\\u0590-\\u05FF\\u0600-\\u06FF\\u0750-\\u077F\\uFB50-\\uFDFF\\uFE70-\\uFEFF]/;
+    var RTL_RE = /[\\u0590-\\u05FF\\u0600-\\u06FF\\u0750-\\u077F\\uFB50-\\uFDFF\\uFE70-\\uFEFE]/;
     var content = document.getElementById('content');
     if (!content) return;
     var btn = document.createElement('button');
@@ -712,7 +814,7 @@ export const PLAN_AUTO_JS =
 export const RTL_AUTO_JS_CODE = `
 /* RTL Toggle Button - Added by script */
 (function() {
-    var RTL = /[\\u0590-\\u05FF\\u0600-\\u06FF\\u0750-\\u077F\\uFB50-\\uFDFF\\uFE70-\\uFEFF]/;
+    var RTL = /[\\u0590-\\u05FF\\u0600-\\u06FF\\u0750-\\u077F\\uFB50-\\uFDFF\\uFE70-\\uFEFE]/;
     var CLS = 'YBYrtl';
 
     /* Bubble selectors — Claude responses and user messages */
@@ -759,6 +861,50 @@ export const RTL_AUTO_JS_CODE = `
             }
         }
     }).observe(root, { childList: true, subtree: true });
+})();
+
+/* BiDi Literal Stripper — removes visible "\\u200F"-style escape sequences the LLM sometimes emits verbatim */
+(function() {
+    var BIDI_LIT = /\\\\u200[EF]|\\\\u202[A-E]|\\\\u206[6-9]/g;
+    var SKIP_SEL = '[class*="codeBlockWrapper_"],pre,code';
+
+    function isInsideCode(node, stopAt) {
+        var p = node.parentNode;
+        while (p && p !== stopAt) {
+            if (p.matches && p.matches(SKIP_SEL)) return true;
+            p = p.parentNode;
+        }
+        return false;
+    }
+
+    function clean(scope) {
+        if (!scope) return;
+        var walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, null);
+        var n;
+        while ((n = walker.nextNode())) {
+            var val = n.nodeValue;
+            /* fast path — skip text nodes without a backslash-u */
+            if (!val || val.indexOf('\\\\u') === -1) continue;
+            if (isInsideCode(n, scope)) continue;
+            var newVal = val.replace(BIDI_LIT, '');
+            if (newVal !== val) n.nodeValue = newVal;
+        }
+    }
+
+    var scanRoot = document.getElementById('root');
+    if (!scanRoot) return;
+
+    clean(scanRoot);
+
+    /* Debounced watcher — batches cleanup during heavy streaming */
+    var timer = null;
+    new MutationObserver(function() {
+        if (timer) return;
+        timer = setTimeout(function() {
+            timer = null;
+            clean(scanRoot);
+        }, 50);
+    }).observe(scanRoot, { childList: true, subtree: true, characterData: true });
 })();
 ${PERMISSION_RTL_JS}
 /* End RTL Toggle Button */
