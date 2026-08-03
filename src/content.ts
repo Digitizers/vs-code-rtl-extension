@@ -294,19 +294,23 @@ const AUTO_RTL_RULES = `
     unicode-bidi: plaintext;
 }
 
-/* Claude's markdown responses (excluding thinking block) */
+/* Claude's markdown responses (excluding thinking block) — container stays RTL
+   for bubble layout; per-block direction is set by the Auto-mode block walker
+   via dir attributes (contains-RTL → rtl, pure LTR → ltr) */
 .YBYrtl [class*="root_"]:not([class*="thinkingContent_"] [class*="root_"]) {
     direction: rtl;
-    unicode-bidi: plaintext;
 }
 
-.YBYrtl [class*="root_"]:not([class*="thinkingContent_"] [class*="root_"]) > :is(p, ul, ol, h1, h2, h3, h4, blockquote),
-.YBYrtl [class*="root_"]:not([class*="thinkingContent_"] [class*="root_"]) > :is(ul, ol) li {
+.YBYrtl [class*="root_"] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote)[dir="rtl"] {
+    direction: rtl;
     text-align: right;
+    unicode-bidi: isolate;
 }
 
-.YBYrtl [class*="root_"]:not([class*="thinkingContent_"] [class*="root_"]) a {
-    unicode-bidi: plaintext;
+.YBYrtl [class*="root_"] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote)[dir="ltr"] {
+    direction: ltr;
+    text-align: left;
+    unicode-bidi: isolate;
 }
 
 /* Prompt input container — no .YBYrtl ancestor in Auto mode, use #root
@@ -905,6 +909,45 @@ export const RTL_AUTO_JS_CODE = `
             clean(scanRoot);
         }, 50);
     }).observe(scanRoot, { childList: true, subtree: true, characterData: true });
+})();
+
+/* Per-Block Direction — sets dir="rtl"/"ltr" on markdown blocks inside .YBYrtl
+   bubbles by presence of RTL characters, so mixed lines read right-aligned
+   while pure-English blocks stay natural LTR. CSS keys off the dir attribute. */
+(function() {
+    var RTL = /[\\u0590-\\u05FF\\u0600-\\u06FF\\u0750-\\u077F\\uFB50-\\uFDFF\\uFE70-\\uFEFE]/;
+    var BLOCK_SEL = 'p,li,h1,h2,h3,h4,h5,h6,blockquote';
+    var SKIP_SEL = '[class*="codeBlockWrapper_"],pre,code,[class*="toolUse_"],[class*="toolResult_"],[class*="thinkingContent_"]';
+
+    function tagBlocks(bubble) {
+        var els = bubble.querySelectorAll(BLOCK_SEL);
+        for (var i = 0; i < els.length; i++) {
+            var el = els[i];
+            if (el.closest && el.closest(SKIP_SEL)) continue;
+            var want = RTL.test(el.textContent || '') ? 'rtl' : 'ltr';
+            if (el.getAttribute('dir') !== want) el.setAttribute('dir', want);
+        }
+    }
+
+    var dirRoot = document.getElementById('root');
+    if (!dirRoot) return;
+
+    function scanAll() {
+        var bubbles = dirRoot.querySelectorAll('.YBYrtl');
+        for (var i = 0; i < bubbles.length; i++) tagBlocks(bubbles[i]);
+    }
+
+    scanAll();
+
+    /* Debounced watcher — re-tags during streaming and when bubbles gain .YBYrtl */
+    var dirTimer = null;
+    new MutationObserver(function() {
+        if (dirTimer) return;
+        dirTimer = setTimeout(function() {
+            dirTimer = null;
+            scanAll();
+        }, 100);
+    }).observe(dirRoot, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] });
 })();
 ${PERMISSION_RTL_JS}
 /* End RTL Toggle Button */

@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.5.1
+
+- **Per-block direction detection (Auto mode)** — response paragraphs previously picked their direction from the *first* character (`unicode-bidi: plaintext`), so a Hebrew answer with a line starting in English drifted left, list bullets flipped to the wrong side, and mixed Hebrew/English lines were hard to read. Auto mode now decides direction per block element (paragraph, list item, heading, blockquote) by *presence* of Hebrew/Arabic/Persian characters: mixed lines align right and read correctly with bullets on the right, while pure-English headings and lines stay naturally left-aligned. Applied live during streaming; code blocks, tool output, and thinking blocks are untouched.
+
 ## v0.5.0
 
 - **New: Force LTR (Always) mode** (`Claude RTL: Force LTR (Always)`) — pins the whole chat (messages, input box, question/permission dialogs, Plan Preview) to left-to-right, even when the conversation contains Hebrew, Arabic, or Persian text. The direction choice is now symmetric: users who want RTL pick an RTL mode, users who prefer a stable LTR layout while chatting in an RTL language pick LTR Always. Shown in the status bar as `LTR: Always` and available from the status-bar menu; survives Claude Code updates via auto-reactivate like the other modes. (Contributed by @moeseif in #19.)
