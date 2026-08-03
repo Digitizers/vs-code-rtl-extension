@@ -37,6 +37,17 @@ for (const tag of ['pre', 'code']) {
     if (!new RegExp(`(^|,)${tag}(,|$)`).test(skipSel)) failures.push(`SKIP_SEL is missing "${tag}"`);
 }
 
+// 3. CSS dir rules must keep the thinking-block guard (Copilot round-2, PR #2):
+//    per-block [dir] styling must never apply under thinkingContent_.
+for (const dir of ['rtl', 'ltr']) {
+    const re = new RegExp(
+        `\\[class\\*="root_"\\]:not\\(\\[class\\*="thinkingContent_"\\] \\[class\\*="root_"\\]\\) :is\\([^)]*\\)\\[dir="${dir}"\\]`
+    );
+    if (!re.test(src)) {
+        failures.push(`CSS [dir="${dir}"] block rule lost its thinkingContent_ guard`);
+    }
+}
+
 if (failures.length) {
     console.error('FAIL — dir-walker scope regression:');
     for (const f of failures) console.error('  - ' + f);

@@ -301,13 +301,13 @@ const AUTO_RTL_RULES = `
     direction: rtl;
 }
 
-.YBYrtl [class*="root_"] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote)[dir="rtl"] {
+.YBYrtl [class*="root_"]:not([class*="thinkingContent_"] [class*="root_"]) :is(p, li, h1, h2, h3, h4, h5, h6, blockquote)[dir="rtl"] {
     direction: rtl;
     text-align: right;
     unicode-bidi: isolate;
 }
 
-.YBYrtl [class*="root_"] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote)[dir="ltr"] {
+.YBYrtl [class*="root_"]:not([class*="thinkingContent_"] [class*="root_"]) :is(p, li, h1, h2, h3, h4, h5, h6, blockquote)[dir="ltr"] {
     direction: ltr;
     text-align: left;
     unicode-bidi: isolate;
@@ -949,13 +949,33 @@ export const RTL_AUTO_JS_CODE = `
 
     scanAll();
 
-    /* Debounced watcher — re-tags during streaming and when bubbles gain .YBYrtl */
+    /* Debounced watcher — re-tags during streaming and when bubbles gain
+       .YBYrtl. Only bubbles touched by the mutation batch are re-tagged;
+       a mutation outside any bubble falls back to a full scan (e.g. a class
+       change that newly marks a bubble). */
     var dirTimer = null;
-    new MutationObserver(function() {
+    var pendingBubbles = [];
+    var pendingFull = false;
+
+    function noteTarget(node) {
+        if (pendingFull) return;
+        var el = node.nodeType === 1 ? node : node.parentElement;
+        var bubble = el && el.closest ? el.closest('.YBYrtl') : null;
+        if (!bubble) { pendingFull = true; return; }
+        if (pendingBubbles.indexOf(bubble) === -1) pendingBubbles.push(bubble);
+    }
+
+    new MutationObserver(function(records) {
+        for (var i = 0; i < records.length; i++) noteTarget(records[i].target);
         if (dirTimer) return;
         dirTimer = setTimeout(function() {
             dirTimer = null;
-            scanAll();
+            var full = pendingFull;
+            var bubbles = pendingBubbles;
+            pendingFull = false;
+            pendingBubbles = [];
+            if (full) { scanAll(); return; }
+            for (var i = 0; i < bubbles.length; i++) tagBlocks(bubbles[i]);
         }, 100);
     }).observe(dirRoot, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] });
 })();
