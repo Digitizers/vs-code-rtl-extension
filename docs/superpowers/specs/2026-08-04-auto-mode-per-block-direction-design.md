@@ -32,9 +32,13 @@ paragraph containing lots of English still goes right.
 ### JS (extends the existing Auto-mode observer in `RTL_AUTO_JS_CODE`)
 
 - For each `.YBYrtl` bubble, walk block elements — `p`, `li`, `h1`–`h6`,
-  `blockquote` — inside markdown containers.
-- Skip anything inside `pre`, `code`, `[class*="codeBlockWrapper_"]`, tool
-  output, and thinking blocks (reuse the stripper's skip approach).
+  `blockquote` — **only inside markdown containers** (`[class*="root_"]`);
+  tool/thinking/todo UI reuses the same tags and must not be tagged.
+- Additionally skip anything inside every container the LTR overrides protect:
+  `pre`, `code`, `codeBlockWrapper_`, `thinking_`/`thinkingContent_`,
+  `toolUse_`/`toolSummary_`/`toolBody_`/`toolResult_`/`toolReference_`,
+  `todoList_`/`todoListContainer_` — a native `dir` attribute on a child is not
+  neutralized by direction rules on its container.
 - Set `dir="rtl"` or `dir="ltr"` per the RTL-char test
   (`/[֐-׿؀-ۿݐ-ݿﭐ-﷿ﹰ-﻾]/`).
 - Re-scan on mutations, debounced — same pattern as the BiDi stripper — so a

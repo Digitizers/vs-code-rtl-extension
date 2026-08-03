@@ -917,15 +917,25 @@ export const RTL_AUTO_JS_CODE = `
 (function() {
     var RTL = /[\\u0590-\\u05FF\\u0600-\\u06FF\\u0750-\\u077F\\uFB50-\\uFDFF\\uFE70-\\uFEFE]/;
     var BLOCK_SEL = 'p,li,h1,h2,h3,h4,h5,h6,blockquote';
-    var SKIP_SEL = '[class*="codeBlockWrapper_"],pre,code,[class*="toolUse_"],[class*="toolResult_"],[class*="thinkingContent_"]';
+    /* Every container the LTR overrides protect — a native dir attribute on a
+       child is NOT neutralized by direction rules on the container, so the
+       walker must never tag inside these */
+    var SKIP_SEL = '[class*="codeBlockWrapper_"],pre,code,[class*="thinkingContent_"],[class*="thinking_"],[class*="toolUse_"],[class*="toolSummary_"],[class*="toolBody_"],[class*="toolResult_"],[class*="toolReference_"],[class*="todoList_"],[class*="todoListContainer_"]';
 
     function tagBlocks(bubble) {
-        var els = bubble.querySelectorAll(BLOCK_SEL);
-        for (var i = 0; i < els.length; i++) {
-            var el = els[i];
-            if (el.closest && el.closest(SKIP_SEL)) continue;
-            var want = RTL.test(el.textContent || '') ? 'rtl' : 'ltr';
-            if (el.getAttribute('dir') !== want) el.setAttribute('dir', want);
+        /* Only markdown containers hold prose; tool/thinking/todo UI reuses the
+           same tags and must keep its LTR layout untouched */
+        var roots = bubble.querySelectorAll('[class*="root_"]');
+        for (var r = 0; r < roots.length; r++) {
+            var rootEl = roots[r];
+            if (rootEl.closest && rootEl.closest(SKIP_SEL)) continue;
+            var els = rootEl.querySelectorAll(BLOCK_SEL);
+            for (var i = 0; i < els.length; i++) {
+                var el = els[i];
+                if (el.closest && el.closest(SKIP_SEL)) continue;
+                var want = RTL.test(el.textContent || '') ? 'rtl' : 'ltr';
+                if (el.getAttribute('dir') !== want) el.setAttribute('dir', want);
+            }
         }
     }
 

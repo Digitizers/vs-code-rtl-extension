@@ -117,7 +117,7 @@
     "build": "node esbuild.mjs --production",
     "watch": "node esbuild.mjs --watch",
     "pretest": "tsc -p tsconfig.test.json",
-    "test": "node test/concurrency.test.cjs",
+    "test": "node test/concurrency.test.cjs && node test/dir-walker-scope.test.cjs",
     "package": "npx @vscode/vsce package"
   },
   "devDependencies": {
