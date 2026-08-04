@@ -58,7 +58,22 @@ if (!/hasOwnRtl\(el\)/.test(w)) {
     failures.push('tagBlocks no longer uses skip-aware hasOwnRtl for direction detection');
 }
 
-// 5. Anchors need their own inline bidi run (Codex round-3 P2, PR #2):
+// 5. A nested block's RTL text must not flip its parent (Codex round-5 P2):
+//    hasOwnRtl only accepts text whose nearest block ancestor is el itself.
+if (!/closest\(BLOCK_SEL\) !== el/.test(w)) {
+    failures.push('hasOwnRtl no longer excludes text owned by nested blocks');
+}
+
+// 6. The observer must never full-scan on unrelated mutations (Codex round-5
+//    P2): pure-English streaming outside bubbles must not re-walk history.
+if (/pendingFull/.test(w) || /scanAll\(\)/.test(w.split('Debounced watcher')[1] || '')) {
+    failures.push('observer regained a full-scan fallback (pendingFull/scanAll in mutation path)');
+}
+if (!/addedNodes/.test(w)) {
+    failures.push('observer no longer inspects addedNodes for new bubbles');
+}
+
+// 7. Anchors need their own inline bidi run (Codex round-3 P2, PR #2):
 //    unicode-bidi is not inherited, so block-level isolation alone leaves
 //    URL punctuation reorderable by the surrounding RTL context.
 if (!/\[class\*="root_"\]:not\(\[class\*="thinkingContent_"\] \[class\*="root_"\]\) a \{\s*\n\s*unicode-bidi: plaintext;/.test(src)) {

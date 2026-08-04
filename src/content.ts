@@ -928,8 +928,10 @@ export const RTL_AUTO_JS_CODE = `
        walker must never tag inside these */
     var SKIP_SEL = '[class*="codeBlockWrapper_"],pre,code,[class*="thinkingContent_"],[class*="thinking_"],[class*="toolUse_"],[class*="toolSummary_"],[class*="toolBody_"],[class*="toolResult_"],[class*="toolReference_"],[class*="todoList_"],[class*="todoListContainer_"]';
 
-    /* True when the block has RTL text OUTSIDE skipped containers — a code
-       block quoting Hebrew inside an English list item must not flip it */
+    /* True when the block has RTL text of its OWN — outside skipped containers
+       (a code block quoting Hebrew inside an English list item must not flip
+       it) and outside nested blocks (a Hebrew sub-item must not flip its
+       English parent; the nested block gets its own dir) */
     function hasOwnRtl(el) {
         if (!RTL.test(el.textContent || '')) return false; /* fast path */
         var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false);
@@ -937,7 +939,9 @@ export const RTL_AUTO_JS_CODE = `
         while ((n = walker.nextNode())) {
             if (!RTL.test(n.nodeValue)) continue;
             var p = n.parentElement;
-            if (p && p.closest && p.closest(SKIP_SEL)) continue;
+            if (!p) continue;
+            if (p.closest && p.closest(SKIP_SEL)) continue;
+            if (p.closest && p.closest(BLOCK_SEL) !== el) continue; /* owned by a nested block */
             return true;
         }
         return false;
@@ -971,31 +975,53 @@ export const RTL_AUTO_JS_CODE = `
     scanAll();
 
     /* Debounced watcher — re-tags during streaming and when bubbles gain
-       .YBYrtl. Only bubbles touched by the mutation batch are re-tagged;
-       a mutation outside any bubble falls back to a full scan (e.g. a class
-       change that newly marks a bubble). */
+       .YBYrtl. Only bubbles touched by the mutation batch are re-tagged.
+       Mutations outside any bubble are ignored (never a full scan — unrelated
+       LTR streaming must not re-walk the whole chat history); new bubbles are
+       caught directly from added nodes and class changes. */
     var dirTimer = null;
     var pendingBubbles = [];
-    var pendingFull = false;
 
-    function noteTarget(node) {
-        if (pendingFull) return;
-        var el = node.nodeType === 1 ? node : node.parentElement;
-        var bubble = el && el.closest ? el.closest('.YBYrtl') : null;
-        if (!bubble) { pendingFull = true; return; }
+    function addBubble(bubble) {
         if (pendingBubbles.indexOf(bubble) === -1) pendingBubbles.push(bubble);
     }
 
+    function noteAncestorBubble(node) {
+        var el = node.nodeType === 1 ? node : node.parentElement;
+        var bubble = el && el.closest ? el.closest('.YBYrtl') : null;
+        if (bubble) addBubble(bubble);
+    }
+
+    function noteRecord(rec) {
+        if (rec.type === 'attributes') {
+            /* class change: the target itself may have just become a bubble */
+            var t = rec.target;
+            if (t.nodeType === 1 && t.classList && t.classList.contains('YBYrtl')) { addBubble(t); return; }
+            noteAncestorBubble(t);
+            return;
+        }
+        if (rec.type === 'childList') {
+            /* added nodes may BE or CONTAIN bubbles not yet under one */
+            for (var a = 0; a < rec.addedNodes.length; a++) {
+                var node = rec.addedNodes[a];
+                if (node.nodeType !== 1) continue;
+                if (node.classList && node.classList.contains('YBYrtl')) addBubble(node);
+                else if (node.querySelectorAll) {
+                    var inner = node.querySelectorAll('.YBYrtl');
+                    for (var b = 0; b < inner.length; b++) addBubble(inner[b]);
+                }
+            }
+        }
+        noteAncestorBubble(rec.target);
+    }
+
     new MutationObserver(function(records) {
-        for (var i = 0; i < records.length; i++) noteTarget(records[i].target);
-        if (dirTimer) return;
+        for (var i = 0; i < records.length; i++) noteRecord(records[i]);
+        if (dirTimer || !pendingBubbles.length) return;
         dirTimer = setTimeout(function() {
             dirTimer = null;
-            var full = pendingFull;
             var bubbles = pendingBubbles;
-            pendingFull = false;
             pendingBubbles = [];
-            if (full) { scanAll(); return; }
             for (var i = 0; i < bubbles.length; i++) tagBlocks(bubbles[i]);
         }, 100);
     }).observe(dirRoot, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] });
