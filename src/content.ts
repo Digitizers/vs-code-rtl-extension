@@ -294,17 +294,27 @@ const AUTO_RTL_RULES = `
     unicode-bidi: plaintext;
 }
 
-/* Claude's markdown responses (excluding thinking block) */
+/* Claude's markdown responses (excluding thinking block) — container stays RTL
+   for bubble layout; per-block direction is set by the Auto-mode block walker
+   via dir attributes (contains-RTL → rtl, pure LTR → ltr) */
 .YBYrtl [class*="root_"]:not([class*="thinkingContent_"] [class*="root_"]) {
     direction: rtl;
-    unicode-bidi: plaintext;
 }
 
-.YBYrtl [class*="root_"]:not([class*="thinkingContent_"] [class*="root_"]) > :is(p, ul, ol, h1, h2, h3, h4, blockquote),
-.YBYrtl [class*="root_"]:not([class*="thinkingContent_"] [class*="root_"]) > :is(ul, ol) li {
+.YBYrtl [class*="root_"]:not([class*="thinkingContent_"] [class*="root_"]) :is(p, li, h1, h2, h3, h4, h5, h6, blockquote)[dir="rtl"] {
+    direction: rtl;
     text-align: right;
+    unicode-bidi: isolate;
 }
 
+.YBYrtl [class*="root_"]:not([class*="thinkingContent_"] [class*="root_"]) :is(p, li, h1, h2, h3, h4, h5, h6, blockquote)[dir="ltr"] {
+    direction: ltr;
+    text-align: left;
+    unicode-bidi: isolate;
+}
+
+/* Links keep their own bidi run — unicode-bidi is not inherited, so block-level
+   isolation alone leaves URL punctuation reorderable by the RTL context */
 .YBYrtl [class*="root_"]:not([class*="thinkingContent_"] [class*="root_"]) a {
     unicode-bidi: plaintext;
 }
@@ -905,6 +915,131 @@ export const RTL_AUTO_JS_CODE = `
             clean(scanRoot);
         }, 50);
     }).observe(scanRoot, { childList: true, subtree: true, characterData: true });
+})();
+
+/* Per-Block Direction — sets dir="rtl"/"ltr" on markdown blocks inside .YBYrtl
+   bubbles by presence of RTL characters, so mixed lines read right-aligned
+   while pure-English blocks stay natural LTR. CSS keys off the dir attribute. */
+(function() {
+    var RTL = /[\\u0590-\\u05FF\\u0600-\\u06FF\\u0750-\\u077F\\uFB50-\\uFDFF\\uFE70-\\uFEFE]/;
+    var BLOCK_SEL = 'p,li,h1,h2,h3,h4,h5,h6,blockquote';
+    /* Every container the LTR overrides protect — a native dir attribute on a
+       child is NOT neutralized by direction rules on the container, so the
+       walker must never tag inside these */
+    var SKIP_SEL = '[class*="codeBlockWrapper_"],pre,code,[class*="thinkingContent_"],[class*="thinking_"],[class*="toolUse_"],[class*="toolSummary_"],[class*="toolBody_"],[class*="toolResult_"],[class*="toolReference_"],[class*="todoList_"],[class*="todoListContainer_"]';
+
+    /* Blocks that render independently (own marker / own alignment) — text
+       inside them must not influence an ancestor block's direction. p and
+       headings inside a loose <li><p>…</p></li> DO count toward the li,
+       because the list marker belongs to the li. */
+    var INDEPENDENT_SEL = 'li,blockquote';
+
+    function ownsText(el, parent) {
+        var node = parent;
+        while (node && node !== el) {
+            if (node.matches && node.matches(INDEPENDENT_SEL)) return false;
+            node = node.parentElement;
+        }
+        return true;
+    }
+
+    /* True when the block has RTL text of its OWN — outside skipped containers
+       (a code block quoting Hebrew inside an English list item must not flip
+       it) and not owned by an independently nested block (a Hebrew sub-item
+       must not flip its English parent; the sub-item gets its own dir) */
+    function hasOwnRtl(el) {
+        if (!RTL.test(el.textContent || '')) return false; /* fast path */
+        var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false);
+        var n;
+        while ((n = walker.nextNode())) {
+            if (!RTL.test(n.nodeValue)) continue;
+            var p = n.parentElement;
+            if (!p) continue;
+            if (p.closest && p.closest(SKIP_SEL)) continue;
+            if (!ownsText(el, p)) continue;
+            return true;
+        }
+        return false;
+    }
+
+    function tagBlocks(bubble) {
+        /* Only markdown containers hold prose; tool/thinking/todo UI reuses the
+           same tags and must keep its LTR layout untouched */
+        var roots = bubble.querySelectorAll('[class*="root_"]');
+        for (var r = 0; r < roots.length; r++) {
+            var rootEl = roots[r];
+            if (rootEl.closest && rootEl.closest(SKIP_SEL)) continue;
+            var els = rootEl.querySelectorAll(BLOCK_SEL);
+            for (var i = 0; i < els.length; i++) {
+                var el = els[i];
+                if (el.closest && el.closest(SKIP_SEL)) continue;
+                var want = hasOwnRtl(el) ? 'rtl' : 'ltr';
+                if (el.getAttribute('dir') !== want) el.setAttribute('dir', want);
+            }
+        }
+    }
+
+    var dirRoot = document.getElementById('root');
+    if (!dirRoot) return;
+
+    function scanAll() {
+        var bubbles = dirRoot.querySelectorAll('.YBYrtl');
+        for (var i = 0; i < bubbles.length; i++) tagBlocks(bubbles[i]);
+    }
+
+    scanAll();
+
+    /* Debounced watcher — re-tags during streaming and when bubbles gain
+       .YBYrtl. Only bubbles touched by the mutation batch are re-tagged.
+       Mutations outside any bubble are ignored (never a full scan — unrelated
+       LTR streaming must not re-walk the whole chat history); new bubbles are
+       caught directly from added nodes and class changes. */
+    var dirTimer = null;
+    var pendingBubbles = [];
+
+    function addBubble(bubble) {
+        if (pendingBubbles.indexOf(bubble) === -1) pendingBubbles.push(bubble);
+    }
+
+    function noteAncestorBubble(node) {
+        var el = node.nodeType === 1 ? node : node.parentElement;
+        var bubble = el && el.closest ? el.closest('.YBYrtl') : null;
+        if (bubble) addBubble(bubble);
+    }
+
+    function noteRecord(rec) {
+        if (rec.type === 'attributes') {
+            /* class change: the target itself may have just become a bubble */
+            var t = rec.target;
+            if (t.nodeType === 1 && t.classList && t.classList.contains('YBYrtl')) { addBubble(t); return; }
+            noteAncestorBubble(t);
+            return;
+        }
+        if (rec.type === 'childList') {
+            /* added nodes may BE or CONTAIN bubbles not yet under one */
+            for (var a = 0; a < rec.addedNodes.length; a++) {
+                var node = rec.addedNodes[a];
+                if (node.nodeType !== 1) continue;
+                if (node.classList && node.classList.contains('YBYrtl')) addBubble(node);
+                else if (node.querySelectorAll) {
+                    var inner = node.querySelectorAll('.YBYrtl');
+                    for (var b = 0; b < inner.length; b++) addBubble(inner[b]);
+                }
+            }
+        }
+        noteAncestorBubble(rec.target);
+    }
+
+    new MutationObserver(function(records) {
+        for (var i = 0; i < records.length; i++) noteRecord(records[i]);
+        if (dirTimer || !pendingBubbles.length) return;
+        dirTimer = setTimeout(function() {
+            dirTimer = null;
+            var bubbles = pendingBubbles;
+            pendingBubbles = [];
+            for (var i = 0; i < bubbles.length; i++) tagBlocks(bubbles[i]);
+        }, 100);
+    }).observe(dirRoot, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] });
 })();
 ${PERMISSION_RTL_JS}
 /* End RTL Toggle Button */
