@@ -48,6 +48,13 @@ for (const dir of ['rtl', 'ltr']) {
     }
 }
 
+// 4. Anchors need their own inline bidi run (Codex round-3 P2, PR #2):
+//    unicode-bidi is not inherited, so block-level isolation alone leaves
+//    URL punctuation reorderable by the surrounding RTL context.
+if (!/\[class\*="root_"\]:not\(\[class\*="thinkingContent_"\] \[class\*="root_"\]\) a \{\s*\n\s*unicode-bidi: plaintext;/.test(src)) {
+    failures.push('anchor unicode-bidi rule missing from Auto-mode CSS');
+}
+
 if (failures.length) {
     console.error('FAIL — dir-walker scope regression:');
     for (const f of failures) console.error('  - ' + f);

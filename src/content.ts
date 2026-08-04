@@ -313,6 +313,12 @@ const AUTO_RTL_RULES = `
     unicode-bidi: isolate;
 }
 
+/* Links keep their own bidi run — unicode-bidi is not inherited, so block-level
+   isolation alone leaves URL punctuation reorderable by the RTL context */
+.YBYrtl [class*="root_"]:not([class*="thinkingContent_"] [class*="root_"]) a {
+    unicode-bidi: plaintext;
+}
+
 /* Prompt input container — no .YBYrtl ancestor in Auto mode, use #root
    to keep specificity high enough to win against Claude Code's own rules */
 #root [class*="messageInputContainer_"] > * {
