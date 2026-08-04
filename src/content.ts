@@ -928,10 +928,25 @@ export const RTL_AUTO_JS_CODE = `
        walker must never tag inside these */
     var SKIP_SEL = '[class*="codeBlockWrapper_"],pre,code,[class*="thinkingContent_"],[class*="thinking_"],[class*="toolUse_"],[class*="toolSummary_"],[class*="toolBody_"],[class*="toolResult_"],[class*="toolReference_"],[class*="todoList_"],[class*="todoListContainer_"]';
 
+    /* Blocks that render independently (own marker / own alignment) — text
+       inside them must not influence an ancestor block's direction. p and
+       headings inside a loose <li><p>…</p></li> DO count toward the li,
+       because the list marker belongs to the li. */
+    var INDEPENDENT_SEL = 'li,blockquote';
+
+    function ownsText(el, parent) {
+        var node = parent;
+        while (node && node !== el) {
+            if (node.matches && node.matches(INDEPENDENT_SEL)) return false;
+            node = node.parentElement;
+        }
+        return true;
+    }
+
     /* True when the block has RTL text of its OWN — outside skipped containers
        (a code block quoting Hebrew inside an English list item must not flip
-       it) and outside nested blocks (a Hebrew sub-item must not flip its
-       English parent; the nested block gets its own dir) */
+       it) and not owned by an independently nested block (a Hebrew sub-item
+       must not flip its English parent; the sub-item gets its own dir) */
     function hasOwnRtl(el) {
         if (!RTL.test(el.textContent || '')) return false; /* fast path */
         var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false);
@@ -941,7 +956,7 @@ export const RTL_AUTO_JS_CODE = `
             var p = n.parentElement;
             if (!p) continue;
             if (p.closest && p.closest(SKIP_SEL)) continue;
-            if (p.closest && p.closest(BLOCK_SEL) !== el) continue; /* owned by a nested block */
+            if (!ownsText(el, p)) continue;
             return true;
         }
         return false;

@@ -58,10 +58,14 @@ if (!/hasOwnRtl\(el\)/.test(w)) {
     failures.push('tagBlocks no longer uses skip-aware hasOwnRtl for direction detection');
 }
 
-// 5. A nested block's RTL text must not flip its parent (Codex round-5 P2):
-//    hasOwnRtl only accepts text whose nearest block ancestor is el itself.
-if (!/closest\(BLOCK_SEL\) !== el/.test(w)) {
-    failures.push('hasOwnRtl no longer excludes text owned by nested blocks');
+// 5. Independently nested blocks' RTL text must not flip the parent, while
+//    loose-list paragraphs still count toward their li (Codex round-5/6 P2s):
+//    ownership stops at nested li/blockquote, not at p/headings.
+if (!/INDEPENDENT_SEL = 'li,blockquote'/.test(w) || !/function ownsText/.test(w)) {
+    failures.push('hasOwnRtl lost the independent-nested-block ownership rule (ownsText/INDEPENDENT_SEL)');
+}
+if (!/ownsText\(el, p\)/.test(w)) {
+    failures.push('hasOwnRtl no longer consults ownsText for direction detection');
 }
 
 // 6. The observer must never full-scan on unrelated mutations (Codex round-5
