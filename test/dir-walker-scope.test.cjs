@@ -48,7 +48,17 @@ for (const dir of ['rtl', 'ltr']) {
     }
 }
 
-// 4. Anchors need their own inline bidi run (Codex round-3 P2, PR #2):
+// 4. Direction detection must ignore text inside skipped containers
+//    (Codex round-4 P2, PR #2): a code block quoting Hebrew inside an
+//    English list item must not flip the item to RTL.
+if (!/function hasOwnRtl/.test(w) || !/createTreeWalker/.test(w)) {
+    failures.push('walker direction detection no longer excludes skipped-container text (hasOwnRtl/TreeWalker missing)');
+}
+if (!/hasOwnRtl\(el\)/.test(w)) {
+    failures.push('tagBlocks no longer uses skip-aware hasOwnRtl for direction detection');
+}
+
+// 5. Anchors need their own inline bidi run (Codex round-3 P2, PR #2):
 //    unicode-bidi is not inherited, so block-level isolation alone leaves
 //    URL punctuation reorderable by the surrounding RTL context.
 if (!/\[class\*="root_"\]:not\(\[class\*="thinkingContent_"\] \[class\*="root_"\]\) a \{\s*\n\s*unicode-bidi: plaintext;/.test(src)) {

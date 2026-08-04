@@ -928,6 +928,21 @@ export const RTL_AUTO_JS_CODE = `
        walker must never tag inside these */
     var SKIP_SEL = '[class*="codeBlockWrapper_"],pre,code,[class*="thinkingContent_"],[class*="thinking_"],[class*="toolUse_"],[class*="toolSummary_"],[class*="toolBody_"],[class*="toolResult_"],[class*="toolReference_"],[class*="todoList_"],[class*="todoListContainer_"]';
 
+    /* True when the block has RTL text OUTSIDE skipped containers — a code
+       block quoting Hebrew inside an English list item must not flip it */
+    function hasOwnRtl(el) {
+        if (!RTL.test(el.textContent || '')) return false; /* fast path */
+        var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false);
+        var n;
+        while ((n = walker.nextNode())) {
+            if (!RTL.test(n.nodeValue)) continue;
+            var p = n.parentElement;
+            if (p && p.closest && p.closest(SKIP_SEL)) continue;
+            return true;
+        }
+        return false;
+    }
+
     function tagBlocks(bubble) {
         /* Only markdown containers hold prose; tool/thinking/todo UI reuses the
            same tags and must keep its LTR layout untouched */
@@ -939,7 +954,7 @@ export const RTL_AUTO_JS_CODE = `
             for (var i = 0; i < els.length; i++) {
                 var el = els[i];
                 if (el.closest && el.closest(SKIP_SEL)) continue;
-                var want = RTL.test(el.textContent || '') ? 'rtl' : 'ltr';
+                var want = hasOwnRtl(el) ? 'rtl' : 'ltr';
                 if (el.getAttribute('dir') !== want) el.setAttribute('dir', want);
             }
         }
