@@ -123,7 +123,7 @@ The original `Claude Code for VS Code` extension lacks native RTL support. This 
 
 ### 📋 Requirements
 
-- [**Claude Code for VS Code**](https://marketplace.visualstudio.com/items?itemName=anthropic.claude-code) (`anthropic.claude-code`) — installed automatically as a dependency
+- [**Claude Code for VS Code**](https://marketplace.visualstudio.com/items?itemName=anthropic.claude-code) (`anthropic.claude-code`) — install it separately in the same IDE
 
 ---
 
@@ -389,7 +389,7 @@ MIT — see [LICENSE](LICENSE) for details.
 
 ### 📋 דרישות
 
-- **Claude Code for VS Code** (`anthropic.claude-code`) — מותקן אוטומטית כתלות
+- **Claude Code for VS Code** (`anthropic.claude-code`) — יש להתקין בנפרד באותו IDE
 
 ---
 
@@ -651,7 +651,7 @@ MIT — ראה קובץ [LICENSE](LICENSE) לפרטים.
 
 ### 📋 المتطلبات
 
-- **Claude Code for VS Code** (`anthropic.claude-code`) — يتم تثبيتها تلقائيًا كتبعية
+- **Claude Code for VS Code** (`anthropic.claude-code`) — يجب تثبيته بشكل منفصل في نفس بيئة التطوير
 
 ---
 
@@ -915,7 +915,7 @@ MIT — انظر ملف [LICENSE](LICENSE) للتفاصيل.
 
 ### 📋 نیازمندی‌ها
 
-- **Claude Code for VS Code** (`anthropic.claude-code`) — به‌صورت خودکار به عنوان وابستگی نصب می‌شود
+- **Claude Code for VS Code** (`anthropic.claude-code`) — باید آن را جداگانه در همان محیط توسعه نصب کنید
 
 ---
 

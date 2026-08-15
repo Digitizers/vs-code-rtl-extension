@@ -21,6 +21,8 @@ export interface RtlStatus {
     cssInstalled: boolean;
     jsInstalled: boolean;
     planPreviewInstalled: boolean;
+    /** Whether Plan Preview's interactive JS is installed (Active/Auto modes) */
+    planPreviewJsInstalled: boolean;
     cssBackupExists: boolean;
     jsBackupExists: boolean;
     mode: RtlMode;

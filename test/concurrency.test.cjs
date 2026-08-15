@@ -17,7 +17,8 @@ const fs = require('fs/promises');
 const path = require('path');
 const os = require('os');
 const assert = require('assert');
-const { addRtlAuto, removeRtl } = require('../out-test/injector.js');
+const { addRtlAuto, removeRtl, getStatus, isModeFullyInstalled } = require('../out-test/injector.js');
+const { PLAN_CSS_START_MARKER, PLAN_JS_START_MARKER } = require('../out-test/content.js');
 
 async function main() {
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'ccrtl-race-'));
@@ -84,10 +85,39 @@ async function main() {
     .filter((f) => f.includes('.ybyrtl.lock') || f.includes('.ybytmp'));
   assert.strictEqual(leftovers.length, 0, `leftover lock/tmp files: ${leftovers}`);
 
-  // 5. removeRtl restores the original byte-for-byte.
+  // 5. A vendor update in the same directory replaces stale backups instead of
+  //    being overwritten by them during reinjection.
+  const updatedJs = '/* updated vendor webview */\n' + 'b'.repeat(1_000_000);
+  const updatedCss = ':root{--vendor-version:2}\n';
+  const updatedExtJs =
+    'globalThis.vendorVersion=2;\n<style>.p{version:2}</style>\n<div id="content"></div>\n' +
+    "vscode.postMessage({ type: 'ready' })\n";
+  await fs.writeFile(jsPath, updatedJs);
+  await fs.writeFile(cssPath, updatedCss);
+  await fs.writeFile(extensionJsPath, updatedExtJs);
+  await addRtlAuto(ext);
+
+  assert.ok((await fs.readFile(jsPath, 'utf-8')).includes('updated vendor webview'), 'stale JS backup overwrote vendor update');
+  assert.ok((await fs.readFile(cssPath, 'utf-8')).includes('--vendor-version:2'), 'stale CSS backup overwrote vendor update');
+  assert.ok((await fs.readFile(extensionJsPath, 'utf-8')).includes('vendorVersion=2'), 'stale Plan backup overwrote vendor update');
+  assert.strictEqual(await fs.readFile(jsPath + '.bak', 'utf-8'), updatedJs, 'JS backup was not refreshed');
+  assert.strictEqual(await fs.readFile(cssPath + '.bak', 'utf-8'), updatedCss, 'CSS backup was not refreshed');
+
+  const [healthy] = await getStatus([ext]);
+  assert.ok(isModeFullyInstalled(healthy, 'auto'), 'complete Auto installation reported unhealthy');
+  assert.ok(!isModeFullyInstalled({ ...healthy, jsInstalled: false }, 'auto'), 'Auto mode ignored missing webview JS');
+  assert.ok(!isModeFullyInstalled({ ...healthy, planPreviewJsInstalled: false }, 'auto'), 'Auto mode ignored missing Plan JS');
+  assert.ok(!isModeFullyInstalled({ ...healthy, mode: 'inactive', planPreviewJsInstalled: true }, 'inactive'), 'Inactive mode ignored leftover Plan JS');
+
+  // 6. removeRtl strips Plan markers even when its backup has gone missing.
+  await fs.rm(extensionJsPath + '.bak');
   await removeRtl(ext);
   const restoredJs = (await fs.stat(jsPath)).size;
-  assert.strictEqual(restoredJs, origJs, `removeRtl did not restore index.js (${restoredJs} != ${origJs})`);
+  assert.strictEqual(restoredJs, Buffer.byteLength(updatedJs), 'removeRtl did not restore updated index.js');
+  const restoredPlan = await fs.readFile(extensionJsPath, 'utf-8');
+  assert.ok(restoredPlan.includes('vendorVersion=2'), 'Plan fallback lost vendor content');
+  assert.ok(!restoredPlan.includes(PLAN_CSS_START_MARKER), 'Plan CSS marker remained without backup');
+  assert.ok(!restoredPlan.includes(PLAN_JS_START_MARKER), 'Plan JS marker remained without backup');
 
   console.log(`PASS — ${WINDOWS} concurrent windows, no corruption`);
   console.log(`  index.js  orig=${origJs} inject=${finalJs} remove=${restoredJs}`);

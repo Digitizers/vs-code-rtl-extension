@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { findClaudeExtensions } from './finder.js';
-import { getStatus } from './injector.js';
+import { getStatus, isModeFullyInstalled } from './injector.js';
 
 let statusBarItem: vscode.StatusBarItem;
 
@@ -26,12 +26,16 @@ export async function updateStatusBar(): Promise<void> {
     }
 
     const statuses = await getStatus(extensions);
+    const incomplete = statuses.some(s => !isModeFullyInstalled(s, s.mode));
     const autoMode = statuses.some(s => s.mode === 'auto');
     const ltrMode = statuses.some(s => s.mode === 'ltr');
     const alwaysMode = statuses.some(s => s.mode === 'always');
     const activeMode = statuses.some(s => s.mode === 'active');
 
-    if (autoMode) {
+    if (incomplete) {
+        statusBarItem.text = '$(warning) RTL: Repair needed';
+        statusBarItem.tooltip = 'Claude Code RTL installation is incomplete. Click to manage.';
+    } else if (autoMode) {
         statusBarItem.text = '$(globe) RTL: Auto';
         statusBarItem.tooltip = 'Claude Code RTL auto-detects direction. Click to manage.';
     } else if (ltrMode) {

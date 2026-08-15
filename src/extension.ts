@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { ClaudeExtensionInfo, RtlMode } from './types.js';
 import { findClaudeExtensions } from './finder.js';
-import { addRtl, addRtlAlways, addRtlAuto, addLtrAlways, removeRtl, getStatus } from './injector.js';
+import { addRtl, addRtlAlways, addRtlAuto, addLtrAlways, removeRtl, getStatus, isModeFullyInstalled } from './injector.js';
 import { FontOptions } from './content.js';
 import { createStatusBarItem, updateStatusBar, disposeStatusBar } from './statusBar.js';
 
@@ -65,7 +65,14 @@ async function handleMode(
     channel.show(true);
     await saveMode(mode);
 
-    if (anyChanged) {
+    const statuses = await getStatus(extensions);
+    const incomplete = statuses.filter(s => !isModeFullyInstalled(s, mode));
+    if (incomplete.length > 0) {
+        const names = incomplete.map(s => s.extension.name).join(', ');
+        vscode.window.showWarningMessage(`Claude RTL: ${label} was incomplete for: ${names}. Check the output for details.`);
+    }
+
+    if (anyChanged && incomplete.length === 0) {
         vscode.commands.executeCommand('workbench.action.reloadWindow');
     } else if (noChangeMessage) {
         vscode.window.showInformationMessage(noChangeMessage);
@@ -143,6 +150,11 @@ async function silentInject(extensions: ClaudeExtensionInfo[], action: Injection
     return anyChanged;
 }
 
+async function allExtensionsMatchMode(extensions: ClaudeExtensionInfo[], mode: RtlMode): Promise<boolean> {
+    const statuses = await getStatus(extensions);
+    return statuses.every(s => isModeFullyInstalled(s, mode));
+}
+
 async function saveVersion(): Promise<void> {
     await globalState.update(STATE_VERSION_KEY, currentVersion);
 }
@@ -183,7 +195,8 @@ async function autoReactivate(): Promise<void> {
                 await saveVersion();
                 // Re-inject with latest code
                 const action = MODE_ACTIONS[detectedMode];
-                if (action && await silentInject(extensions, action, getFontOptions())) {
+                if (action && await silentInject(extensions, action, getFontOptions()) &&
+                    await allExtensionsMatchMode(extensions, detectedMode)) {
                     vscode.commands.executeCommand('workbench.action.reloadWindow');
                 }
                 return;
@@ -201,7 +214,8 @@ async function autoReactivate(): Promise<void> {
         await saveVersion();
         if (extensions.length === 0) return;
 
-        if (await silentInject(extensions, addRtl, getFontOptions())) {
+        if (await silentInject(extensions, addRtl, getFontOptions()) &&
+            await allExtensionsMatchMode(extensions, 'active')) {
             vscode.commands.executeCommand('workbench.action.reloadWindow');
         }
         return;
@@ -217,7 +231,8 @@ async function autoReactivate(): Promise<void> {
         if (extensions.length === 0) return;
 
         const action = MODE_ACTIONS[savedMode];
-        if (action && await silentInject(extensions, action, getFontOptions())) {
+        if (action && await silentInject(extensions, action, getFontOptions()) &&
+            await allExtensionsMatchMode(extensions, savedMode)) {
             vscode.commands.executeCommand('workbench.action.reloadWindow');
         }
         return;
@@ -230,11 +245,12 @@ async function autoReactivate(): Promise<void> {
     if (extensions.length === 0) return;
 
     const statuses = await getStatus(extensions);
-    const needsReinjection = statuses.some(s => s.mode !== savedMode);
+    const needsReinjection = statuses.some(s => !isModeFullyInstalled(s, savedMode));
     if (!needsReinjection) return;
 
     const action = MODE_ACTIONS[savedMode];
-    if (action && await silentInject(extensions, action, getFontOptions())) {
+    if (action && await silentInject(extensions, action, getFontOptions()) &&
+        await allExtensionsMatchMode(extensions, savedMode)) {
         vscode.commands.executeCommand('workbench.action.reloadWindow');
     }
 }

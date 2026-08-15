@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 
 const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'content.ts'), 'utf8');
+const injectorSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'injector.ts'), 'utf8');
 
 const walker = src.match(/\/\* Per-Block Direction[\s\S]*?\n\}\)\(\);/);
 if (!walker) {
@@ -82,6 +83,14 @@ if (!/addedNodes/.test(w)) {
 //    URL punctuation reorderable by the surrounding RTL context.
 if (!/\[class\*="root_"\]:not\(\[class\*="thinkingContent_"\] \[class\*="root_"\]\) a \{\s*\n\s*unicode-bidi: plaintext;/.test(src)) {
     failures.push('anchor unicode-bidi rule missing from Auto-mode CSS');
+}
+
+// 8. Mutations must never proceed after failing to acquire the cross-process lock.
+if (!/Timed out waiting for RTL file lock/.test(injectorSrc)) {
+    failures.push('file-lock timeout no longer fails closed');
+}
+if (!/process\.kill\(pid, 0\)/.test(injectorSrc)) {
+    failures.push('stale-lock cleanup no longer checks whether the owner process is alive');
 }
 
 if (failures.length) {

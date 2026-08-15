@@ -12,7 +12,7 @@ The extension works by injecting CSS and JavaScript into Claude Code's webview f
 - **Build:** esbuild (bundled to single `dist/extension.js`, CJS format)
 - **Target:** ES2022, Node16 modules
 - **VS Code API:** ^1.94.0
-- **No test framework** — no tests exist in this project
+- **Tests:** Node.js integration/regression tests run through `npm test`
 
 ## Commands
 

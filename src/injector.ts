@@ -1,6 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { ClaudeExtensionInfo, RtlStatus } from './types.js';
+import { ClaudeExtensionInfo, RtlMode, RtlStatus } from './types.js';
 import {
     RTL_JS_CODE,
     RTL_START_MARKER, RTL_END_MARKER,
@@ -67,14 +67,27 @@ async function withFileLock<T>(lockDir: string, fn: () => Promise<T>): Promise<T
             if (err.code !== 'EEXIST') throw err;
             try {
                 const st = await fs.stat(lockPath);
-                if (Date.now() - st.mtimeMs > STALE_MS) {
+                const pidText = await fs.readFile(lockPath, 'utf-8').catch(() => '');
+                const pid = Number.parseInt(pidText, 10);
+                let ownerAlive = Number.isInteger(pid) && pid > 0;
+                if (ownerAlive) {
+                    try {
+                        process.kill(pid, 0);
+                    } catch (ownerError) {
+                        const code = (ownerError as NodeJS.ErrnoException).code;
+                        ownerAlive = code === 'EPERM';
+                    }
+                }
+                if (Date.now() - st.mtimeMs > STALE_MS && !ownerAlive) {
                     await fs.rm(lockPath, { force: true });
                     continue; // retry immediately after breaking a stale lock
                 }
             } catch {
                 continue; // lock vanished between open and stat — retry
             }
-            if (Date.now() - start > MAX_WAIT_MS) break; // proceed unlocked rather than hang
+            if (Date.now() - start > MAX_WAIT_MS) {
+                throw new Error(`Timed out waiting for RTL file lock: ${lockPath}`);
+            }
             await delay(RETRY_MS);
         }
     }
@@ -163,22 +176,22 @@ interface InjectionResult {
 async function injectFile(
     filePath: string,
     injectedContent: string,
+    startMarker: string,
+    endMarker: string,
     label: string,
     messages: string[],
 ): Promise<boolean> {
     try {
         const backupPath = filePath + '.bak';
 
-        if (await exists(backupPath)) {
-            await fs.copyFile(backupPath, filePath);
-            messages.push(`  ${label}: Restored from backup`);
-        } else {
-            await fs.copyFile(filePath, backupPath);
-            messages.push(`  ${label}: Backup created: ${backupPath}`);
-        }
+        const current = await fs.readFile(filePath, 'utf-8');
+        const pristine = stripBlock(current, startMarker, endMarker);
+        await atomicWrite(backupPath, pristine);
+        messages.push(`  ${label}: Backup refreshed: ${backupPath}`);
 
-        const content = await fs.readFile(filePath, 'utf-8');
-        const newContent = content + '\n' + injectedContent;
+        // Keep exactly one owned separator before the marked block and no
+        // trailing whitespace after it, so stripBlock restores byte-for-byte.
+        const newContent = pristine + '\n' + injectedContent.trim();
         // Corruption guard: injection only ADDS content, so the result must be
         // at least as large as the pristine backup. A smaller result means we
         // read a torn file (e.g. a racing window truncated it) — abort without
@@ -248,16 +261,11 @@ async function injectPlanPreview(
     try {
         const backupPath = extensionJsPath + '.bak';
 
-        // Restore from backup if it exists, otherwise create backup
-        if (await exists(backupPath)) {
-            await fs.copyFile(backupPath, extensionJsPath);
-            messages.push('  Plan: Restored extension.js from backup');
-        } else {
-            await fs.copyFile(extensionJsPath, backupPath);
-            messages.push(`  Plan: Backup created: ${backupPath}`);
-        }
-
-        let content = await fs.readFile(extensionJsPath, 'utf-8');
+        const current = await fs.readFile(extensionJsPath, 'utf-8');
+        let content = stripBlock(current, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER);
+        content = stripBlock(content, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER);
+        await atomicWrite(backupPath, content);
+        messages.push(`  Plan: Backup refreshed: ${backupPath}`);
 
         // Find the Plan Preview template by its unique anchor
         const anchorIdx = content.indexOf(PLAN_TEMPLATE_ANCHOR);
@@ -330,6 +338,30 @@ async function isPlanPreviewInstalled(extensionJsPath: string | null): Promise<b
     }
 }
 
+async function isPlanPreviewJsInstalled(extensionJsPath: string | null): Promise<boolean> {
+    if (!extensionJsPath) return false;
+    try {
+        const content = await fs.readFile(extensionJsPath, 'utf-8');
+        return content.includes(PLAN_JS_START_MARKER);
+    } catch {
+        return false;
+    }
+}
+
+/** Return whether every component available in this Claude installation is healthy. */
+export function isModeFullyInstalled(status: RtlStatus, expectedMode: RtlMode): boolean {
+    if (status.mode !== expectedMode) return false;
+    if (expectedMode === 'inactive') {
+        return !status.cssInstalled && !status.jsInstalled && !status.planPreviewInstalled && !status.planPreviewJsInstalled;
+    }
+
+    const needsInteractiveJs = expectedMode === 'active' || expectedMode === 'auto';
+    if (needsInteractiveJs && status.extension.jsPath && !status.jsInstalled) return false;
+    if (status.extension.extensionJsPath && !status.planPreviewInstalled) return false;
+    if (needsInteractiveJs && status.extension.extensionJsPath && !status.planPreviewJsInstalled) return false;
+    return true;
+}
+
 // ── Status ────────────────────────────────────────────────────────
 
 /**
@@ -354,6 +386,7 @@ export async function getStatus(extensions: ClaudeExtensionInfo[]): Promise<RtlS
             cssInstalled,
             jsInstalled: await isJsInstalled(ext.jsPath),
             planPreviewInstalled: await isPlanPreviewInstalled(ext.extensionJsPath),
+            planPreviewJsInstalled: await isPlanPreviewJsInstalled(ext.extensionJsPath),
             cssBackupExists: await exists(ext.cssPath + '.bak'),
             jsBackupExists: ext.jsPath ? await exists(ext.jsPath + '.bak') : false,
             mode: autoMode ? 'auto' : ltrMode ? 'ltr' : alwaysMode ? 'always' : cssInstalled ? 'active' : 'inactive',
@@ -372,14 +405,14 @@ async function addRtlImpl(ext: ClaudeExtensionInfo, fonts?: FontOptions): Promis
     const messages: string[] = [];
     let changed = false;
 
-    if (await injectFile(ext.cssPath, generateActiveCssRules(fonts), 'CSS', messages)) {
+    if (await injectFile(ext.cssPath, generateActiveCssRules(fonts), RTL_START_MARKER, RTL_END_MARKER, 'CSS', messages)) {
         messages.push(`  CSS: RTL support added to ${ext.name}`);
         changed = true;
     }
 
     if (!ext.jsPath) {
         messages.push('  JS:  index.js not found, skipping button injection');
-    } else if (await injectFile(ext.jsPath, RTL_JS_CODE, 'JS', messages)) {
+    } else if (await injectFile(ext.jsPath, RTL_JS_CODE, JS_START_MARKER, JS_END_MARKER, 'JS', messages)) {
         messages.push(`  JS:  Toggle button added to ${ext.name}`);
         changed = true;
     }
@@ -398,7 +431,7 @@ async function addRtlAlwaysImpl(ext: ClaudeExtensionInfo, fonts?: FontOptions): 
     const messages: string[] = [];
     let changed = false;
 
-    if (await injectFile(ext.cssPath, generateAlwaysCssRules(fonts), 'CSS', messages)) {
+    if (await injectFile(ext.cssPath, generateAlwaysCssRules(fonts), RTL_START_MARKER, RTL_END_MARKER, 'CSS', messages)) {
         messages.push(`  CSS: RTL Always support added to ${ext.name}`);
         changed = true;
     }
@@ -426,14 +459,14 @@ async function addRtlAutoImpl(ext: ClaudeExtensionInfo, fonts?: FontOptions): Pr
     const messages: string[] = [];
     let changed = false;
 
-    if (await injectFile(ext.cssPath, generateAutoCssRules(fonts), 'CSS', messages)) {
+    if (await injectFile(ext.cssPath, generateAutoCssRules(fonts), RTL_START_MARKER, RTL_END_MARKER, 'CSS', messages)) {
         messages.push(`  CSS: RTL Auto support added to ${ext.name}`);
         changed = true;
     }
 
     if (!ext.jsPath) {
         messages.push('  JS:  index.js not found, skipping auto-detection injection');
-    } else if (await injectFile(ext.jsPath, RTL_AUTO_JS_CODE, 'JS', messages)) {
+    } else if (await injectFile(ext.jsPath, RTL_AUTO_JS_CODE, JS_START_MARKER, JS_END_MARKER, 'JS', messages)) {
         messages.push(`  JS:  Auto-detection script added to ${ext.name}`);
         changed = true;
     }
@@ -454,7 +487,7 @@ async function addLtrAlwaysImpl(ext: ClaudeExtensionInfo, fonts?: FontOptions): 
     const messages: string[] = [];
     let changed = false;
 
-    if (await injectFile(ext.cssPath, generateLtrCssRules(fonts), 'CSS', messages)) {
+    if (await injectFile(ext.cssPath, generateLtrCssRules(fonts), RTL_START_MARKER, RTL_END_MARKER, 'CSS', messages)) {
         messages.push(`  CSS: LTR Always support added to ${ext.name}`);
         changed = true;
     }
@@ -532,9 +565,16 @@ async function removeRtlImpl(ext: ClaudeExtensionInfo): Promise<InjectionResult>
     }
 
     // Restore extension.js (Plan Preview) from backup
-    if (ext.extensionJsPath && await isPlanPreviewInstalled(ext.extensionJsPath)) {
+    if (ext.extensionJsPath && (await isPlanPreviewInstalled(ext.extensionJsPath) || await isPlanPreviewJsInstalled(ext.extensionJsPath))) {
         if (await restoreAndDeleteBackup(ext.extensionJsPath, 'Plan', messages)) {
             changed = true;
+        } else {
+            const cssRemoved = await removeInjected(ext.extensionJsPath, true, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER, 'Plan CSS', ext.name, messages);
+            const jsStillInstalled = await isPlanPreviewJsInstalled(ext.extensionJsPath);
+            const jsRemoved = jsStillInstalled
+                ? await removeInjected(ext.extensionJsPath, true, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER, 'Plan JS', ext.name, messages)
+                : false;
+            if (cssRemoved || jsRemoved) changed = true;
         }
     }
 
