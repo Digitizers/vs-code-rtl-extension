@@ -211,6 +211,16 @@ async function main() {
   assert.strictEqual(unsupportedStatus.planPreviewSupported, false, 'unsupported Plan template reported supported');
   assert.ok(isModeFullyInstalled(unsupportedStatus, 'auto'), 'unsupported optional Plan template made Auto unhealthy');
 
+  // A configured Plan path that cannot be read is a failed operation, not an
+  // optional older bundle without supported anchors.
+  const unreadablePlan = path.join(extDir, 'unreadable-plan-bundle');
+  await fs.mkdir(unreadablePlan);
+  const unreadableExt = { ...ext, extensionJsPath: unreadablePlan };
+  await addRtlAuto(unreadableExt);
+  const [unreadableStatus] = await getStatus([unreadableExt]);
+  assert.strictEqual(unreadableStatus.planPreviewReadError, true, 'unreadable Plan bundle lost its error state');
+  assert.ok(!isModeFullyInstalled(unreadableStatus, 'auto'), 'unreadable Plan bundle was treated as optional');
+
   const noReadyPlan = path.join(extDir, 'no-ready-extension.js');
   await fs.writeFile(noReadyPlan, '<style>.p{version:3}</style>\n<div id="content"></div>\n');
   const noReadyExt = { ...ext, extensionJsPath: noReadyPlan };

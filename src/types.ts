@@ -34,6 +34,8 @@ export interface RtlStatus {
     planPreviewSupported: boolean;
     /** Whether interactive Plan modes have every required JS injection point */
     planPreviewInteractiveSupported: boolean;
+    /** True when a configured Plan bundle exists but could not be read */
+    planPreviewReadError: boolean;
     cssBackupExists: boolean;
     jsBackupExists: boolean;
     mode: RtlMode;

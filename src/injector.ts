@@ -501,6 +501,7 @@ async function isPlanPreviewInteractiveSupported(extensionJsPath: string | null)
 /** Return whether every component available in this Claude installation is healthy. */
 export function isModeFullyInstalled(status: RtlStatus, expectedMode: RtlMode): boolean {
     if (status.mode !== expectedMode) return false;
+    if (status.planPreviewReadError) return false;
     if (expectedMode === 'inactive') {
         return !status.cssManagedBlockPresent && !status.jsManagedBlockPresent &&
             !status.planPreviewCssManagedBlockPresent && !status.planPreviewJsManagedBlockPresent;
@@ -535,6 +536,18 @@ export async function getStatus(extensions: ClaudeExtensionInfo[]): Promise<RtlS
             cssContent = await fs.readFile(ext.cssPath, 'utf-8');
         } catch { /* file unreadable — treat as not installed */ }
 
+        let planPreviewReadError = false;
+        if (ext.extensionJsPath) {
+            try {
+                await fs.readFile(ext.extensionJsPath, 'utf-8');
+            } catch {
+                // An unreadable bundle is not the same as a readable older
+                // version without our anchors: injection/removal could not be
+                // verified, so the overall operation must remain incomplete.
+                planPreviewReadError = true;
+            }
+        }
+
         const cssInstalled = hasCompleteBlock(cssContent, RTL_START_MARKER, RTL_END_MARKER);
         const cssManagedBlockPresent = hasManagedBlock(cssContent, RTL_START_MARKER, RTL_END_MARKER);
         const autoMode = cssInstalled && cssContent.includes(RTL_MODE_AUTO_MARKER);
@@ -556,6 +569,7 @@ export async function getStatus(extensions: ClaudeExtensionInfo[]): Promise<RtlS
             planPreviewJsMode: await getPlanPreviewJsMode(ext.extensionJsPath),
             planPreviewSupported: await isPlanPreviewSupported(ext.extensionJsPath),
             planPreviewInteractiveSupported: await isPlanPreviewInteractiveSupported(ext.extensionJsPath),
+            planPreviewReadError,
             cssBackupExists: await exists(ext.cssPath + '.bak'),
             jsBackupExists: ext.jsPath ? await exists(ext.jsPath + '.bak') : false,
             mode: autoMode ? 'auto' : ltrMode ? 'ltr' : alwaysMode ? 'always' : cssInstalled ? 'active' : 'inactive',
