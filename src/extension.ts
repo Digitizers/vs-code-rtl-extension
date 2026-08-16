@@ -68,6 +68,7 @@ async function handleMode(
     const statuses = await getStatus(extensions);
     const incomplete = statuses.filter(s => !isModeFullyInstalled(s, mode));
     if (incomplete.length > 0) {
+        await updateStatusBar();
         const names = incomplete.map(s => s.extension.name).join(', ');
         vscode.window.showWarningMessage(`Claude RTL: ${label} was incomplete for: ${names}. Check the output for details.`);
     }
