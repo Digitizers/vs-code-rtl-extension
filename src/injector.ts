@@ -47,15 +47,17 @@ function delay(ms: number): Promise<void> {
  * guarantees one injection at a time per extension directory, across windows
  * and processes.
  *
- * The lock is best-effort: a stale lock (older than STALE_MS, e.g. from a
- * crashed window) is broken, and after MAX_WAIT_MS we proceed anyway rather
- * than hang the extension forever.
+ * Fail closed: lock files are never reclaimed automatically because deleting
+ * a stale pathname cannot be made atomic with verifying its owner on every
+ * supported platform. After a crash, the error names the file users may remove
+ * manually once every IDE window is closed.
  */
 async function withFileLock<T>(lockDir: string, fn: () => Promise<T>): Promise<T> {
     const lockPath = path.join(lockDir, '.ybyrtl.lock');
-    const STALE_MS = 30_000;
     const RETRY_MS = 100;
-    const MAX_WAIT_MS = 20_000;
+    const MAX_WAIT_MS = process.env.NODE_ENV === 'test'
+        ? Number(process.env.RTL_TEST_LOCK_TIMEOUT_MS ?? 250)
+        : 20_000;
 
     let handle: fs.FileHandle | undefined;
     const start = Date.now();
@@ -68,53 +70,12 @@ async function withFileLock<T>(lockDir: string, fn: () => Promise<T>): Promise<T
             const err = e as NodeJS.ErrnoException;
             if (err.code !== 'EEXIST') throw err;
 
-            let st: Awaited<ReturnType<typeof fs.stat>>;
-            let pidText: string;
-            try {
-                [st, pidText] = await Promise.all([
-                    fs.stat(lockPath),
-                    fs.readFile(lockPath, 'utf-8'),
-                ]);
-            } catch (inspectError) {
-                if ((inspectError as NodeJS.ErrnoException).code === 'ENOENT') continue;
-                throw inspectError;
-            }
-
-            const pid = Number.parseInt(pidText, 10);
-            let ownerAlive = Number.isInteger(pid) && pid > 0;
-            if (ownerAlive) {
-                try {
-                    process.kill(pid, 0);
-                } catch (ownerError) {
-                    ownerAlive = (ownerError as NodeJS.ErrnoException).code === 'EPERM';
-                }
-            }
-
-            if (Date.now() - st.mtimeMs > STALE_MS && !ownerAlive) {
-                // Claim the exact stale inode with a hard link. If another
-                // process replaces lockPath first, the inode comparison fails
-                // and we cannot unlink its fresh lock.
-                const claimPath = `${lockPath}.claim.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}`;
-                try {
-                    await fs.link(lockPath, claimPath);
-                    const [claimedStat, currentStat] = await Promise.all([
-                        fs.stat(claimPath),
-                        fs.stat(lockPath),
-                    ]);
-                    if (claimedStat.dev === currentStat.dev && claimedStat.ino === currentStat.ino) {
-                        await fs.rm(lockPath, { force: true });
-                    }
-                } catch (claimError) {
-                    const code = (claimError as NodeJS.ErrnoException).code;
-                    if (code !== 'ENOENT' && code !== 'EEXIST') throw claimError;
-                } finally {
-                    await fs.rm(claimPath, { force: true }).catch(() => { /* ignore */ });
-                }
-                continue;
-            }
-
             if (Date.now() - start > MAX_WAIT_MS) {
-                throw new Error(`Timed out waiting for RTL file lock: ${lockPath}`);
+                const owner = await fs.readFile(lockPath, 'utf-8').catch(() => 'unknown');
+                throw new Error(
+                    `Timed out waiting for RTL file lock (owner PID: ${owner}). ` +
+                    `Close all IDE windows, then remove this lock manually: ${lockPath}`,
+                );
             }
             await delay(RETRY_MS);
         }

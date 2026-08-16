@@ -90,11 +90,8 @@ if (!/\[class\*="root_"\]:not\(\[class\*="thinkingContent_"\] \[class\*="root_"\
 if (!/Timed out waiting for RTL file lock/.test(injectorSrc)) {
     failures.push('file-lock timeout no longer fails closed');
 }
-if (!/process\.kill\(pid, 0\)/.test(injectorSrc)) {
-    failures.push('stale-lock cleanup no longer checks whether the owner process is alive');
-}
-if (!/fs\.link\(lockPath, claimPath\)/.test(injectorSrc) || !/claimedStat\.ino === currentStat\.ino/.test(injectorSrc)) {
-    failures.push('stale-lock reclamation no longer claims and verifies the exact inode');
+if (!/remove this lock manually/.test(injectorSrc) || /fs\.link\(lockPath/.test(injectorSrc)) {
+    failures.push('file locking no longer fails closed with manual stale-lock recovery');
 }
 if (!/noChangeMessage && !anyChanged && incomplete\.length === 0/.test(extensionSrc)) {
     failures.push('no-change message is no longer suppressed after an incomplete operation');

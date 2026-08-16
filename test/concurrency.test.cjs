@@ -17,6 +17,8 @@ const fs = require('fs/promises');
 const path = require('path');
 const os = require('os');
 const assert = require('assert');
+process.env.NODE_ENV = 'test';
+process.env.RTL_TEST_LOCK_TIMEOUT_MS = '250';
 const { addRtlAuto, addRtlAlways, removeRtl, getStatus, isModeFullyInstalled } = require('../out-test/injector.js');
 const {
   PLAN_CSS_START_MARKER, PLAN_JS_START_MARKER, RTL_AUTO_JS_CODE,
@@ -58,12 +60,19 @@ async function main() {
     name: 'anthropic.claude-code-9.9.9-test',
   };
 
-  // Seed a stale lock and make several windows race to reclaim it. Reclamation
-  // must be serialized so no process can unlink another process's fresh lock.
+  // A stale lock must fail closed without touching target files. Users can
+  // remove it manually only after closing all IDE windows.
   const staleLock = path.join(extDir, '.ybyrtl.lock');
   await fs.writeFile(staleLock, '999999999');
-  const staleTime = new Date(Date.now() - 60_000);
-  await fs.utimes(staleLock, staleTime, staleTime);
+  await assert.rejects(
+    addRtlAuto(ext),
+    (error) => error.message.includes('remove this lock manually') && error.message.includes(staleLock),
+    'stale lock did not fail closed with manual recovery instructions',
+  );
+  assert.strictEqual(await fs.readFile(jsPath, 'utf-8'), bigJs, 'mutation ran while stale lock existed');
+  assert.strictEqual(await fs.readFile(staleLock, 'utf-8'), '999999999', 'stale lock was reclaimed automatically');
+  await fs.rm(staleLock);
+  process.env.RTL_TEST_LOCK_TIMEOUT_MS = '5000';
 
   // Simulate N IDE windows patching the SAME files at once.
   const WINDOWS = 8;
