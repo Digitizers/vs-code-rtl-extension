@@ -222,12 +222,12 @@ async function injectFile(
         const backupPath = filePath + '.bak';
 
         const current = await fs.readFile(filePath, 'utf-8');
-        const hasManagedBlock = current.includes(startMarker);
+        const hasAnyManagedBlock = hasManagedBlock(current, startMarker, endMarker);
         const hasBackup = await exists(backupPath);
         const existingBackup = hasBackup ? await fs.readFile(backupPath, 'utf-8') : null;
         const currentIsAmbiguousPrefix = existingBackup !== null &&
             current.length < existingBackup.length && existingBackup.startsWith(current);
-        if (!hasManagedBlock && currentIsAmbiguousPrefix) {
+        if (!hasAnyManagedBlock && currentIsAmbiguousPrefix) {
             messages.push(
                 `  ${label}: Aborted — current file is an ambiguous shorter prefix of its backup; ` +
                 'both files were preserved for manual recovery',
@@ -237,7 +237,7 @@ async function injectFile(
         // If our markers are still present, the current file may be a torn
         // result from an earlier race, so restore only with that positive
         // evidence. Markerless prefixes are ambiguous and fail closed above.
-        const preserveBackup = hasBackup && hasManagedBlock;
+        const preserveBackup = hasBackup && hasAnyManagedBlock;
         const pristine = preserveBackup
             ? existingBackup!
             : stripBlock(current, startMarker, endMarker, true);

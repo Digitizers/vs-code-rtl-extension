@@ -22,7 +22,7 @@ process.env.RTL_TEST_LOCK_TIMEOUT_MS = '250';
 const { addRtlAuto, addRtlAlways, removeRtl, getStatus, isModeFullyInstalled } = require('../out-test/injector.js');
 const {
   PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER, RTL_AUTO_JS_CODE,
-  JS_MODE_ACTIVE_MARKER, JS_MODE_AUTO_MARKER,
+  JS_END_MARKER, JS_MODE_ACTIVE_MARKER, JS_MODE_AUTO_MARKER,
   PLAN_JS_MODE_ACTIVE_MARKER, PLAN_JS_MODE_AUTO_MARKER,
   PLAN_CSS_MODE_ALWAYS_MARKER, PLAN_CSS_MODE_LTR_MARKER,
 } = require('../out-test/content.js');
@@ -112,6 +112,11 @@ async function main() {
   await addRtlAuto(ext);
   assert.ok((await fs.readFile(jsPath, 'utf-8')).includes('claude code webview bundle'), 'known-good JS backup was not used');
   assert.strictEqual((await fs.stat(jsPath + '.bak')).size, origJs, 'corrupt marker-bearing file replaced JS backup');
+
+  await fs.writeFile(jsPath, '/* front-truncated bundle */\n' + JS_END_MARKER);
+  await addRtlAuto(ext);
+  assert.ok((await fs.readFile(jsPath, 'utf-8')).includes('claude code webview bundle'), 'orphaned end marker did not restore known-good JS backup');
+  assert.strictEqual((await fs.stat(jsPath + '.bak')).size, origJs, 'orphaned end marker replaced JS backup');
 
   const ambiguousPrefix = bigJs.slice(0, 1_000_000);
   await fs.writeFile(jsPath, ambiguousPrefix);
