@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.5.2
+
+- **Fail-closed cross-window locking** — concurrent extension hosts now serialize mutations without automatically reclaiming ambiguous stale locks. If recovery cannot be proven safe, the operation stops and gives explicit manual cleanup instructions instead of risking a torn Claude Code bundle.
+- **Stronger backup and corruption recovery** — reinjection preserves known-good backups for partial blocks, orphaned markers, markerless prefixes, and UTF-8 truncation in the middle of a multibyte character. Ambiguous vendor updates are preserved for manual recovery.
+- **Safe Plan Preview repair** — embedded Plan blocks are validated separately from append-only webview blocks, preventing backup-free repair or removal from truncating the remaining vendor `extension.js` bundle.
+- **Accurate installation health** — status checks now validate the requested mode, exact CSS/JS variants, complete managed blocks, compatibility anchors, and unreadable bundle states. Partial operations and successful no-op deactivation refresh the status bar immediately.
+- **Expanded regression coverage and documentation** — concurrency, stale backups, partial installations, mode mismatches, unreadable files, and backup-free cleanup are covered by automated tests; installation docs now clarify that Claude Code must be installed separately in the same IDE.
+
 ## v0.5.1
 
 - **Per-block direction detection (Auto mode)** — response paragraphs previously picked their direction from the *first* character (`unicode-bidi: plaintext`), so a Hebrew answer with a line starting in English drifted left, list bullets flipped to the wrong side, and mixed Hebrew/English lines were hard to read. Auto mode now decides direction per block element (paragraph, list item, heading, blockquote) by *presence* of Hebrew/Arabic/Persian characters: mixed lines align right and read correctly with bullets on the right, while pure-English headings and lines stay naturally left-aligned. Applied live during streaming; code blocks, tool output, and thinking blocks are untouched.
