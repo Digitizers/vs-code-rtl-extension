@@ -180,6 +180,13 @@ async function main() {
   assert.ok(!noReadyStatus.planPreviewInstalled, 'partial Plan CSS was injected without its required JS hook');
   assert.ok(isModeFullyInstalled(noReadyStatus, 'auto'), 'unsupported interactive Plan template made Auto unhealthy');
 
+  await addRtlAlways(noReadyExt);
+  assert.ok((await fs.readFile(noReadyPlan, 'utf-8')).includes(PLAN_CSS_START_MARKER), 'static Plan setup was not installed');
+  await addRtlAuto(noReadyExt);
+  const [cleanedNoReadyStatus] = await getStatus([noReadyExt]);
+  assert.ok(!cleanedNoReadyStatus.planPreviewInstalled, 'stale static Plan CSS survived unsupported interactive switch');
+  assert.ok(isModeFullyInstalled(cleanedNoReadyStatus, 'auto'), 'cleaned unsupported Plan template made Auto unhealthy');
+
   // 8. Noninteractive modes are unhealthy if restoring the webview JS backup
   //    fails and leaves an old toggle/observer behind.
   await fs.rm(jsPath + '.bak');

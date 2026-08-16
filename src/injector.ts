@@ -311,26 +311,32 @@ async function injectPlanPreview(
             messages.push(`  Plan: Backup refreshed: ${backupPath}`);
         }
 
+        const leaveUnsupportedPlanClean = async (message: string): Promise<false> => {
+            messages.push(message);
+            if (hasManagedBlock) {
+                await atomicWrite(extensionJsPath, content);
+                messages.push('  Plan: Removed stale Plan injection from unsupported template');
+            }
+            return false;
+        };
+
         // Find the Plan Preview template by its unique anchor
         const anchorIdx = content.indexOf(PLAN_TEMPLATE_ANCHOR);
         if (anchorIdx === -1) {
-            messages.push('  Plan: Plan Preview template not found in extension.js (older Claude Code version?)');
-            return false;
+            return leaveUnsupportedPlanClean('  Plan: Plan Preview template not found in extension.js (older Claude Code version?)');
         }
 
         // Find </style> before the anchor — this is the plan template's style block
         const styleEndTag = '</style>';
         const styleEndIdx = content.lastIndexOf(styleEndTag, anchorIdx);
         if (styleEndIdx === -1) {
-            messages.push('  Plan: Could not locate </style> in Plan Preview template');
-            return false;
+            return leaveUnsupportedPlanClean('  Plan: Could not locate </style> in Plan Preview template');
         }
 
         const readyMsg = "vscode.postMessage({ type: 'ready' })";
         const readyIdx = jsContent ? content.indexOf(readyMsg, anchorIdx) : -1;
         if (jsContent && readyIdx === -1) {
-            messages.push('  Plan: Could not locate JS injection point in Plan Preview template');
-            return false;
+            return leaveUnsupportedPlanClean('  Plan: Could not locate JS injection point in Plan Preview template');
         }
 
         // Inject CSS before </style>
