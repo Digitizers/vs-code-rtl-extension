@@ -96,6 +96,9 @@ if (!/remove this lock manually/.test(injectorSrc) || /fs\.link\(lockPath/.test(
 if (!/noChangeMessage && !anyChanged && incomplete\.length === 0/.test(extensionSrc)) {
     failures.push('no-change message is no longer suppressed after an incomplete operation');
 }
+if (!/noChangeMessage && !anyChanged && incomplete\.length === 0\) \{\s*await updateStatusBar\(mode\);/.test(extensionSrc)) {
+    failures.push('status bar is no longer refreshed after successful no-op deactivation');
+}
 if (!/if \(incomplete\.length > 0\) \{\s*await updateStatusBar\(mode\);/.test(extensionSrc)) {
     failures.push('status bar is no longer refreshed immediately after incomplete operations');
 }
