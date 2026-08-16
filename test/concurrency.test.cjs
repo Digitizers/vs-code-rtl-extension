@@ -166,6 +166,14 @@ async function main() {
   const repairedPlanBlocks = await fs.readFile(extensionJsPath, 'utf-8');
   assert.ok(repairedPlanBlocks.includes(PLAN_CSS_END_MARKER) && repairedPlanBlocks.includes(PLAN_JS_END_MARKER), 'truncated Plan blocks were not repaired');
 
+  await fs.writeFile(extensionJsPath, repairedPlanBlocks.slice(0, repairedPlanBlocks.indexOf(PLAN_CSS_END_MARKER)));
+  const [truncatedPlanCssStatus] = await getStatus([ext]);
+  assert.strictEqual(truncatedPlanCssStatus.planPreviewCssManagedBlockPresent, true, 'partial Plan CSS lost managed ownership');
+  assert.strictEqual(truncatedPlanCssStatus.planPreviewInstalled, false, 'Plan CSS without end marker reported installed');
+  assert.ok(!isModeFullyInstalled(truncatedPlanCssStatus, 'auto'), 'partial unsupported Plan CSS reported healthy');
+  await addRtlAuto(ext);
+  assert.ok((await fs.readFile(extensionJsPath, 'utf-8')).includes(PLAN_CSS_END_MARKER), 'partial Plan CSS was not repaired');
+
   await fs.writeFile(jsPath, (await fs.readFile(jsPath, 'utf-8')).replace(JS_MODE_AUTO_MARKER, JS_MODE_ACTIVE_MARKER));
   await fs.writeFile(extensionJsPath, (await fs.readFile(extensionJsPath, 'utf-8')).replace(PLAN_JS_MODE_AUTO_MARKER, PLAN_JS_MODE_ACTIVE_MARKER));
   const [wrongInteractiveMode] = await getStatus([ext]);
