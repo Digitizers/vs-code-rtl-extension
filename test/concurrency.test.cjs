@@ -148,9 +148,13 @@ async function main() {
   await fs.writeFile(jsPath, completeJs.slice(0, completeJs.indexOf('/* End RTL Toggle Button */')));
   const [truncatedJsStatus] = await getStatus([ext]);
   assert.strictEqual(truncatedJsStatus.jsInstalled, false, 'JS without end marker reported installed');
+  assert.strictEqual(truncatedJsStatus.jsManagedBlockPresent, true, 'partial JS block lost managed ownership');
   assert.ok(!isModeFullyInstalled(truncatedJsStatus, 'auto'), 'truncated JS block reported healthy');
+  await addRtlAlways(ext);
+  assert.ok(!(await fs.readFile(jsPath, 'utf-8')).includes(JS_MODE_AUTO_MARKER), 'static mode did not restore partial JS backup');
+  const [repairedStaticStatus] = await getStatus([ext]);
+  assert.ok(isModeFullyInstalled(repairedStaticStatus, 'always'), 'static mode remained unhealthy after partial JS restore');
   await addRtlAuto(ext);
-  assert.ok((await fs.readFile(jsPath, 'utf-8')).includes('/* End RTL Toggle Button */'), 'truncated JS was not repaired');
 
   const completePlanBlocks = await fs.readFile(extensionJsPath, 'utf-8');
   const planJsEnd = completePlanBlocks.indexOf(PLAN_JS_END_MARKER);

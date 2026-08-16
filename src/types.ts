@@ -19,12 +19,16 @@ export type RtlMode = 'active' | 'always' | 'auto' | 'ltr' | 'inactive';
 export interface RtlStatus {
     extension: ClaudeExtensionInfo;
     cssInstalled: boolean;
+    cssManagedBlockPresent: boolean;
     jsInstalled: boolean;
+    jsManagedBlockPresent: boolean;
     jsMode: 'active' | 'auto' | null;
     planPreviewInstalled: boolean;
+    planPreviewCssManagedBlockPresent: boolean;
     planPreviewMode: Exclude<RtlMode, 'inactive'> | null;
     /** Whether Plan Preview's interactive JS is installed (Active/Auto modes) */
     planPreviewJsInstalled: boolean;
+    planPreviewJsManagedBlockPresent: boolean;
     planPreviewJsMode: 'active' | 'auto' | null;
     /** Whether this Claude version contains the Plan Preview template we support */
     planPreviewSupported: boolean;

@@ -38,6 +38,10 @@ function hasCompleteBlock(content: string, startMarker: string, endMarker: strin
     return startIdx !== -1 && content.indexOf(endMarker, startIdx + startMarker.length) !== -1;
 }
 
+function hasManagedBlock(content: string, startMarker: string, endMarker: string): boolean {
+    return content.includes(startMarker) || content.includes(endMarker);
+}
+
 // ── Concurrency-safe file IO ──────────────────────────────────────
 
 function delay(ms: number): Promise<void> {
@@ -134,6 +138,16 @@ async function isJsInstalled(jsPath: string | null): Promise<boolean> {
     try {
         const content = await fs.readFile(jsPath, 'utf-8');
         return hasCompleteBlock(content, JS_START_MARKER, JS_END_MARKER);
+    } catch {
+        return false;
+    }
+}
+
+async function hasJsManagedBlock(jsPath: string | null): Promise<boolean> {
+    if (!jsPath) return false;
+    try {
+        const content = await fs.readFile(jsPath, 'utf-8');
+        return hasManagedBlock(content, JS_START_MARKER, JS_END_MARKER);
     } catch {
         return false;
     }
@@ -420,6 +434,26 @@ async function isPlanPreviewJsInstalled(extensionJsPath: string | null): Promise
     }
 }
 
+async function hasPlanCssManagedBlock(extensionJsPath: string | null): Promise<boolean> {
+    if (!extensionJsPath) return false;
+    try {
+        const content = await fs.readFile(extensionJsPath, 'utf-8');
+        return hasManagedBlock(content, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER);
+    } catch {
+        return false;
+    }
+}
+
+async function hasPlanJsManagedBlock(extensionJsPath: string | null): Promise<boolean> {
+    if (!extensionJsPath) return false;
+    try {
+        const content = await fs.readFile(extensionJsPath, 'utf-8');
+        return hasManagedBlock(content, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER);
+    } catch {
+        return false;
+    }
+}
+
 async function getPlanPreviewJsMode(extensionJsPath: string | null): Promise<'active' | 'auto' | null> {
     if (!extensionJsPath) return null;
     try {
@@ -461,13 +495,14 @@ async function isPlanPreviewInteractiveSupported(extensionJsPath: string | null)
 export function isModeFullyInstalled(status: RtlStatus, expectedMode: RtlMode): boolean {
     if (status.mode !== expectedMode) return false;
     if (expectedMode === 'inactive') {
-        return !status.cssInstalled && !status.jsInstalled && !status.planPreviewInstalled && !status.planPreviewJsInstalled;
+        return !status.cssManagedBlockPresent && !status.jsManagedBlockPresent &&
+            !status.planPreviewCssManagedBlockPresent && !status.planPreviewJsManagedBlockPresent;
     }
 
     const needsInteractiveJs = expectedMode === 'active' || expectedMode === 'auto';
     if (needsInteractiveJs && status.extension.jsPath && !status.jsInstalled) return false;
     if (needsInteractiveJs && status.extension.jsPath && status.jsMode !== expectedMode) return false;
-    if (!needsInteractiveJs && (status.jsInstalled || status.planPreviewJsInstalled)) return false;
+    if (!needsInteractiveJs && (status.jsManagedBlockPresent || status.planPreviewJsManagedBlockPresent)) return false;
     const planSupported = needsInteractiveJs
         ? status.planPreviewInteractiveSupported
         : status.planPreviewSupported;
@@ -494,6 +529,7 @@ export async function getStatus(extensions: ClaudeExtensionInfo[]): Promise<RtlS
         } catch { /* file unreadable — treat as not installed */ }
 
         const cssInstalled = hasCompleteBlock(cssContent, RTL_START_MARKER, RTL_END_MARKER);
+        const cssManagedBlockPresent = hasManagedBlock(cssContent, RTL_START_MARKER, RTL_END_MARKER);
         const autoMode = cssInstalled && cssContent.includes(RTL_MODE_AUTO_MARKER);
         const ltrMode = cssInstalled && !autoMode && cssContent.includes(RTL_MODE_LTR_MARKER);
         const alwaysMode = cssInstalled && !autoMode && !ltrMode && cssContent.includes(RTL_MODE_ALWAYS_MARKER);
@@ -501,11 +537,15 @@ export async function getStatus(extensions: ClaudeExtensionInfo[]): Promise<RtlS
         statuses.push({
             extension: ext,
             cssInstalled,
+            cssManagedBlockPresent,
             jsInstalled: await isJsInstalled(ext.jsPath),
+            jsManagedBlockPresent: await hasJsManagedBlock(ext.jsPath),
             jsMode: await getJsMode(ext.jsPath),
             planPreviewInstalled: await isPlanPreviewInstalled(ext.extensionJsPath),
+            planPreviewCssManagedBlockPresent: await hasPlanCssManagedBlock(ext.extensionJsPath),
             planPreviewMode: await getPlanPreviewMode(ext.extensionJsPath),
             planPreviewJsInstalled: await isPlanPreviewJsInstalled(ext.extensionJsPath),
+            planPreviewJsManagedBlockPresent: await hasPlanJsManagedBlock(ext.extensionJsPath),
             planPreviewJsMode: await getPlanPreviewJsMode(ext.extensionJsPath),
             planPreviewSupported: await isPlanPreviewSupported(ext.extensionJsPath),
             planPreviewInteractiveSupported: await isPlanPreviewInteractiveSupported(ext.extensionJsPath),
@@ -559,7 +599,7 @@ async function addRtlAlwaysImpl(ext: ClaudeExtensionInfo, fonts?: FontOptions): 
     }
 
     // Remove JS button if installed
-    if (ext.jsPath && await isJsInstalled(ext.jsPath)) {
+    if (ext.jsPath && await hasJsManagedBlock(ext.jsPath)) {
         if (await restoreAndDeleteBackup(ext.jsPath, 'JS', messages)) {
             changed = true;
         }
@@ -615,7 +655,7 @@ async function addLtrAlwaysImpl(ext: ClaudeExtensionInfo, fonts?: FontOptions): 
     }
 
     // Remove JS button if installed
-    if (ext.jsPath && await isJsInstalled(ext.jsPath)) {
+    if (ext.jsPath && await hasJsManagedBlock(ext.jsPath)) {
         if (await restoreAndDeleteBackup(ext.jsPath, 'JS', messages)) {
             changed = true;
         }
@@ -675,25 +715,26 @@ async function removeRtlImpl(ext: ClaudeExtensionInfo): Promise<InjectionResult>
     const messages: string[] = [];
     let changed = false;
 
-    if (await removeInjected(ext.cssPath, await isCssInstalled(ext.cssPath), RTL_START_MARKER, RTL_END_MARKER, 'CSS', ext.name, messages)) {
+    const cssContent = await fs.readFile(ext.cssPath, 'utf-8').catch(() => '');
+    if (await removeInjected(ext.cssPath, hasManagedBlock(cssContent, RTL_START_MARKER, RTL_END_MARKER), RTL_START_MARKER, RTL_END_MARKER, 'CSS', ext.name, messages)) {
         changed = true;
     }
 
-    const jsInstalled = ext.jsPath ? await isJsInstalled(ext.jsPath) : false;
-    if (!ext.jsPath || !jsInstalled) {
+    const jsManaged = ext.jsPath ? await hasJsManagedBlock(ext.jsPath) : false;
+    if (!ext.jsPath || !jsManaged) {
         messages.push(`  JS:  Button not installed in ${ext.name}`);
-    } else if (await removeInjected(ext.jsPath, jsInstalled, JS_START_MARKER, JS_END_MARKER, 'JS', ext.name, messages)) {
+    } else if (await removeInjected(ext.jsPath, jsManaged, JS_START_MARKER, JS_END_MARKER, 'JS', ext.name, messages)) {
         changed = true;
     }
 
     // Restore extension.js (Plan Preview) from backup
-    if (ext.extensionJsPath && (await isPlanPreviewInstalled(ext.extensionJsPath) || await isPlanPreviewJsInstalled(ext.extensionJsPath))) {
+    if (ext.extensionJsPath && (await hasPlanCssManagedBlock(ext.extensionJsPath) || await hasPlanJsManagedBlock(ext.extensionJsPath))) {
         if (await restoreAndDeleteBackup(ext.extensionJsPath, 'Plan', messages)) {
             changed = true;
         } else {
             const cssRemoved = await removeInjected(ext.extensionJsPath, true, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER, 'Plan CSS', ext.name, messages);
-            const jsStillInstalled = await isPlanPreviewJsInstalled(ext.extensionJsPath);
-            const jsRemoved = jsStillInstalled
+            const jsStillManaged = await hasPlanJsManagedBlock(ext.extensionJsPath);
+            const jsRemoved = jsStillManaged
                 ? await removeInjected(ext.extensionJsPath, true, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER, 'Plan JS', ext.name, messages)
                 : false;
             if (cssRemoved || jsRemoved) changed = true;
