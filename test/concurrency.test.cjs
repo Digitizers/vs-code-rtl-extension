@@ -113,10 +113,12 @@ async function main() {
   assert.ok((await fs.readFile(jsPath, 'utf-8')).includes('claude code webview bundle'), 'known-good JS backup was not used');
   assert.strictEqual((await fs.stat(jsPath + '.bak')).size, origJs, 'corrupt marker-bearing file replaced JS backup');
 
-  await fs.writeFile(jsPath, bigJs.slice(0, 1_000_000));
-  await addRtlAuto(ext);
-  assert.ok((await fs.readFile(jsPath, 'utf-8')).includes('claude code webview bundle'), 'markerless truncation replaced known-good JS backup');
-  assert.strictEqual((await fs.stat(jsPath + '.bak')).size, origJs, 'markerless truncation replaced JS backup');
+  const ambiguousPrefix = bigJs.slice(0, 1_000_000);
+  await fs.writeFile(jsPath, ambiguousPrefix);
+  const ambiguousResult = await addRtlAuto(ext);
+  assert.strictEqual(await fs.readFile(jsPath, 'utf-8'), ambiguousPrefix, 'ambiguous prefix was overwritten');
+  assert.strictEqual((await fs.stat(jsPath + '.bak')).size, origJs, 'ambiguous prefix replaced JS backup');
+  assert.ok(ambiguousResult.messages.some((m) => m.includes('ambiguous shorter prefix')), 'ambiguous prefix was not reported');
 
   // 6. A clean vendor update in the same directory replaces stale backups instead of
   //    being overwritten by them during reinjection.

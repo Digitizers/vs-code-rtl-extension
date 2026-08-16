@@ -192,12 +192,19 @@ async function injectFile(
         const hasManagedBlock = current.includes(startMarker);
         const hasBackup = await exists(backupPath);
         const existingBackup = hasBackup ? await fs.readFile(backupPath, 'utf-8') : null;
-        const currentIsTruncatedBackup = existingBackup !== null &&
+        const currentIsAmbiguousPrefix = existingBackup !== null &&
             current.length < existingBackup.length && existingBackup.startsWith(current);
+        if (!hasManagedBlock && currentIsAmbiguousPrefix) {
+            messages.push(
+                `  ${label}: Aborted — current file is an ambiguous shorter prefix of its backup; ` +
+                'both files were preserved for manual recovery',
+            );
+            return false;
+        }
         // If our markers are still present, the current file may be a torn
-        // result from an earlier race. A torn append may also lose the markers
-        // entirely, so a smaller current file never replaces a larger backup.
-        const preserveBackup = hasBackup && (hasManagedBlock || currentIsTruncatedBackup);
+        // result from an earlier race, so restore only with that positive
+        // evidence. Markerless prefixes are ambiguous and fail closed above.
+        const preserveBackup = hasBackup && hasManagedBlock;
         const pristine = preserveBackup
             ? existingBackup!
             : stripBlock(current, startMarker, endMarker);
@@ -284,10 +291,17 @@ async function injectPlanPreview(
         const hasManagedBlock = current.includes(PLAN_CSS_START_MARKER) || current.includes(PLAN_JS_START_MARKER);
         const hasBackup = await exists(backupPath);
         const existingBackup = hasBackup ? await fs.readFile(backupPath, 'utf-8') : null;
-        const currentIsTruncatedBackup = existingBackup !== null &&
+        const currentIsAmbiguousPrefix = existingBackup !== null &&
             current.length < existingBackup.length && existingBackup.startsWith(current);
+        if (!hasManagedBlock && currentIsAmbiguousPrefix) {
+            messages.push(
+                '  Plan: Aborted — current file is an ambiguous shorter prefix of its backup; ' +
+                'both files were preserved for manual recovery',
+            );
+            return false;
+        }
         let content: string;
-        if (hasBackup && (hasManagedBlock || currentIsTruncatedBackup)) {
+        if (hasBackup && hasManagedBlock) {
             content = existingBackup!;
             messages.push('  Plan: Preserved existing backup');
         } else {
