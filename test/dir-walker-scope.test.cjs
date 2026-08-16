@@ -9,6 +9,8 @@ const fs = require('fs');
 const path = require('path');
 
 const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'content.ts'), 'utf8');
+const injectorSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'injector.ts'), 'utf8');
+const extensionSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'extension.ts'), 'utf8');
 
 const walker = src.match(/\/\* Per-Block Direction[\s\S]*?\n\}\)\(\);/);
 if (!walker) {
@@ -82,6 +84,27 @@ if (!/addedNodes/.test(w)) {
 //    URL punctuation reorderable by the surrounding RTL context.
 if (!/\[class\*="root_"\]:not\(\[class\*="thinkingContent_"\] \[class\*="root_"\]\) a \{\s*\n\s*unicode-bidi: plaintext;/.test(src)) {
     failures.push('anchor unicode-bidi rule missing from Auto-mode CSS');
+}
+
+// 8. Mutations must never proceed after failing to acquire the cross-process lock.
+if (!/Timed out waiting for RTL file lock/.test(injectorSrc)) {
+    failures.push('file-lock timeout no longer fails closed');
+}
+if (!/remove this lock manually/.test(injectorSrc) || /fs\.link\(lockPath/.test(injectorSrc)) {
+    failures.push('file locking no longer fails closed with manual stale-lock recovery');
+}
+if (!/noChangeMessage && !anyChanged && incomplete\.length === 0/.test(extensionSrc)) {
+    failures.push('no-change message is no longer suppressed after an incomplete operation');
+}
+if (!/noChangeMessage && !anyChanged && incomplete\.length === 0\) \{\s*await updateStatusBar\(mode\);/.test(extensionSrc)) {
+    failures.push('status bar is no longer refreshed after successful no-op deactivation');
+}
+if (!/if \(incomplete\.length > 0\) \{\s*await updateStatusBar\(mode\);/.test(extensionSrc)) {
+    failures.push('status bar is no longer refreshed immediately after incomplete operations');
+}
+const statusBarSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'statusBar.ts'), 'utf8');
+if (!/isModeFullyInstalled\(s, expectedMode\)/.test(statusBarSrc)) {
+    failures.push('status bar health is no longer checked against the requested/saved mode');
 }
 
 if (failures.length) {

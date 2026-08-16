@@ -1,15 +1,19 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { ClaudeExtensionInfo, RtlStatus } from './types.js';
+import { ClaudeExtensionInfo, RtlMode, RtlStatus } from './types.js';
 import {
     RTL_JS_CODE,
     RTL_START_MARKER, RTL_END_MARKER,
     JS_START_MARKER, JS_END_MARKER,
+    JS_MODE_ACTIVE_MARKER, JS_MODE_AUTO_MARKER,
     RTL_MODE_ALWAYS_MARKER, RTL_MODE_AUTO_MARKER, RTL_MODE_LTR_MARKER,
     RTL_AUTO_JS_CODE,
     generateActiveCssRules, generateAlwaysCssRules, generateAutoCssRules, generateLtrCssRules,
     PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER,
+    PLAN_CSS_MODE_ACTIVE_MARKER, PLAN_CSS_MODE_ALWAYS_MARKER,
+    PLAN_CSS_MODE_AUTO_MARKER, PLAN_CSS_MODE_LTR_MARKER,
     PLAN_JS_START_MARKER, PLAN_JS_END_MARKER,
+    PLAN_JS_MODE_ACTIVE_MARKER, PLAN_JS_MODE_AUTO_MARKER,
     generatePlanActiveCss, PLAN_ACTIVE_JS,
     generatePlanAlwaysCss,
     generatePlanAutoCss, PLAN_AUTO_JS,
@@ -29,6 +33,15 @@ async function exists(p: string): Promise<boolean> {
     }
 }
 
+function hasCompleteBlock(content: string, startMarker: string, endMarker: string): boolean {
+    const startIdx = content.indexOf(startMarker);
+    return startIdx !== -1 && content.indexOf(endMarker, startIdx + startMarker.length) !== -1;
+}
+
+function hasManagedBlock(content: string, startMarker: string, endMarker: string): boolean {
+    return content.includes(startMarker) || content.includes(endMarker);
+}
+
 // ── Concurrency-safe file IO ──────────────────────────────────────
 
 function delay(ms: number): Promise<void> {
@@ -45,15 +58,17 @@ function delay(ms: number): Promise<void> {
  * guarantees one injection at a time per extension directory, across windows
  * and processes.
  *
- * The lock is best-effort: a stale lock (older than STALE_MS, e.g. from a
- * crashed window) is broken, and after MAX_WAIT_MS we proceed anyway rather
- * than hang the extension forever.
+ * Fail closed: lock files are never reclaimed automatically because deleting
+ * a stale pathname cannot be made atomic with verifying its owner on every
+ * supported platform. After a crash, the error names the file users may remove
+ * manually once every IDE window is closed.
  */
 async function withFileLock<T>(lockDir: string, fn: () => Promise<T>): Promise<T> {
     const lockPath = path.join(lockDir, '.ybyrtl.lock');
-    const STALE_MS = 30_000;
     const RETRY_MS = 100;
-    const MAX_WAIT_MS = 20_000;
+    const MAX_WAIT_MS = process.env.NODE_ENV === 'test'
+        ? Number(process.env.RTL_TEST_LOCK_TIMEOUT_MS ?? 250)
+        : 20_000;
 
     let handle: fs.FileHandle | undefined;
     const start = Date.now();
@@ -65,16 +80,14 @@ async function withFileLock<T>(lockDir: string, fn: () => Promise<T>): Promise<T
         } catch (e) {
             const err = e as NodeJS.ErrnoException;
             if (err.code !== 'EEXIST') throw err;
-            try {
-                const st = await fs.stat(lockPath);
-                if (Date.now() - st.mtimeMs > STALE_MS) {
-                    await fs.rm(lockPath, { force: true });
-                    continue; // retry immediately after breaking a stale lock
-                }
-            } catch {
-                continue; // lock vanished between open and stat — retry
+
+            if (Date.now() - start > MAX_WAIT_MS) {
+                const owner = await fs.readFile(lockPath, 'utf-8').catch(() => 'unknown');
+                throw new Error(
+                    `Timed out waiting for RTL file lock (owner PID: ${owner}). ` +
+                    `Close all IDE windows, then remove this lock manually: ${lockPath}`,
+                );
             }
-            if (Date.now() - start > MAX_WAIT_MS) break; // proceed unlocked rather than hang
             await delay(RETRY_MS);
         }
     }
@@ -111,7 +124,7 @@ async function atomicWrite(filePath: string, data: string): Promise<void> {
 export async function isCssInstalled(cssPath: string): Promise<boolean> {
     try {
         const content = await fs.readFile(cssPath, 'utf-8');
-        return content.includes(RTL_START_MARKER);
+        return hasCompleteBlock(content, RTL_START_MARKER, RTL_END_MARKER);
     } catch {
         return false;
     }
@@ -124,27 +137,64 @@ async function isJsInstalled(jsPath: string | null): Promise<boolean> {
     if (!jsPath) return false;
     try {
         const content = await fs.readFile(jsPath, 'utf-8');
-        return content.includes(JS_START_MARKER);
+        return hasCompleteBlock(content, JS_START_MARKER, JS_END_MARKER);
     } catch {
         return false;
+    }
+}
+
+async function hasJsManagedBlock(jsPath: string | null): Promise<boolean> {
+    if (!jsPath) return false;
+    try {
+        const content = await fs.readFile(jsPath, 'utf-8');
+        return hasManagedBlock(content, JS_START_MARKER, JS_END_MARKER);
+    } catch {
+        return false;
+    }
+}
+
+async function getJsMode(jsPath: string | null): Promise<'active' | 'auto' | null> {
+    if (!jsPath) return null;
+    try {
+        const content = await fs.readFile(jsPath, 'utf-8');
+        if (!hasCompleteBlock(content, JS_START_MARKER, JS_END_MARKER)) return null;
+        if (content.includes(JS_MODE_AUTO_MARKER)) return 'auto';
+        if (content.includes(JS_MODE_ACTIVE_MARKER)) return 'active';
+        return null;
+    } catch {
+        return null;
     }
 }
 
 /**
  * Strip a marked block from content string.
  */
-function stripBlock(content: string, startMarker: string, endMarker: string): string {
+function stripBlock(
+    content: string,
+    startMarker: string,
+    endMarker: string,
+    truncateIncompleteTail = false,
+): string {
     const startIdx = content.indexOf(startMarker);
-    const endIdx = content.indexOf(endMarker);
-    if (startIdx === -1 || endIdx === -1) return content;
+    const endIdx = startIdx === -1 ? -1 : content.indexOf(endMarker, startIdx + startMarker.length);
+    if (startIdx === -1) return content;
 
     let actualStart = startIdx;
-    const actualEnd = endIdx + endMarker.length;
 
     // Remove preceding newline if present
     if (actualStart > 0 && content[actualStart - 1] === '\n') {
         actualStart -= 1;
     }
+
+    // Appended injections own everything from their start marker onward. If a
+    // write was torn before the end marker, retaining that tail and appending a
+    // fresh block would make the old start pair with the new end and falsely
+    // report a healthy installation while leaving broken CSS/JS in place.
+    if (endIdx === -1) {
+        return truncateIncompleteTail ? content.substring(0, actualStart) : content;
+    }
+
+    const actualEnd = endIdx + endMarker.length;
 
     return content.substring(0, actualStart) + content.substring(actualEnd);
 }
@@ -163,22 +213,53 @@ interface InjectionResult {
 async function injectFile(
     filePath: string,
     injectedContent: string,
+    startMarker: string,
+    endMarker: string,
     label: string,
     messages: string[],
 ): Promise<boolean> {
     try {
         const backupPath = filePath + '.bak';
 
-        if (await exists(backupPath)) {
-            await fs.copyFile(backupPath, filePath);
-            messages.push(`  ${label}: Restored from backup`);
+        const currentBuffer = await fs.readFile(filePath);
+        const current = currentBuffer.toString('utf-8');
+        const hasAnyManagedBlock = hasManagedBlock(current, startMarker, endMarker);
+        const hasBackup = await exists(backupPath);
+        const existingBackupBuffer = hasBackup ? await fs.readFile(backupPath) : null;
+        const existingBackup = existingBackupBuffer?.toString('utf-8') ?? null;
+        const currentIsAmbiguousPrefix = existingBackupBuffer !== null &&
+            currentBuffer.length < existingBackupBuffer.length &&
+            existingBackupBuffer.subarray(0, currentBuffer.length).equals(currentBuffer);
+        if (!hasAnyManagedBlock && currentIsAmbiguousPrefix) {
+            messages.push(
+                `  ${label}: Aborted — current file is an ambiguous shorter prefix of its backup; ` +
+                'both files were preserved for manual recovery',
+            );
+            return false;
+        }
+        if (!hasBackup && !current.includes(startMarker) && current.includes(endMarker)) {
+            messages.push(
+                `  ${label}: Aborted — orphaned end marker has no recoverable backup; file preserved`,
+            );
+            return false;
+        }
+        // If our markers are still present, the current file may be a torn
+        // result from an earlier race, so restore only with that positive
+        // evidence. Markerless prefixes are ambiguous and fail closed above.
+        const preserveBackup = hasBackup && hasAnyManagedBlock;
+        const pristine = preserveBackup
+            ? existingBackup!
+            : stripBlock(current, startMarker, endMarker, true);
+        if (!preserveBackup) {
+            await atomicWrite(backupPath, pristine);
+            messages.push(`  ${label}: Backup refreshed: ${backupPath}`);
         } else {
-            await fs.copyFile(filePath, backupPath);
-            messages.push(`  ${label}: Backup created: ${backupPath}`);
+            messages.push(`  ${label}: Preserved existing backup`);
         }
 
-        const content = await fs.readFile(filePath, 'utf-8');
-        const newContent = content + '\n' + injectedContent;
+        // Keep exactly one owned separator before the marked block and no
+        // trailing whitespace after it, so stripBlock restores byte-for-byte.
+        const newContent = pristine + '\n' + injectedContent.trim();
         // Corruption guard: injection only ADDS content, so the result must be
         // at least as large as the pristine backup. A smaller result means we
         // read a torn file (e.g. a racing window truncated it) — abort without
@@ -248,30 +329,72 @@ async function injectPlanPreview(
     try {
         const backupPath = extensionJsPath + '.bak';
 
-        // Restore from backup if it exists, otherwise create backup
-        if (await exists(backupPath)) {
-            await fs.copyFile(backupPath, extensionJsPath);
-            messages.push('  Plan: Restored extension.js from backup');
+        const currentBuffer = await fs.readFile(extensionJsPath);
+        const current = currentBuffer.toString('utf-8');
+        const hasAnyManagedBlock =
+            hasManagedBlock(current, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER) ||
+            hasManagedBlock(current, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER);
+        const hasBackup = await exists(backupPath);
+        const existingBackupBuffer = hasBackup ? await fs.readFile(backupPath) : null;
+        const existingBackup = existingBackupBuffer?.toString('utf-8') ?? null;
+        const currentIsAmbiguousPrefix = existingBackupBuffer !== null &&
+            currentBuffer.length < existingBackupBuffer.length &&
+            existingBackupBuffer.subarray(0, currentBuffer.length).equals(currentBuffer);
+        if (!hasAnyManagedBlock && currentIsAmbiguousPrefix) {
+            messages.push(
+                '  Plan: Aborted — current file is an ambiguous shorter prefix of its backup; ' +
+                'both files were preserved for manual recovery',
+            );
+            return false;
+        }
+        const hasIncompleteEmbeddedBlock =
+            (hasManagedBlock(current, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER) &&
+                !hasCompleteBlock(current, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER)) ||
+            (hasManagedBlock(current, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER) &&
+                !hasCompleteBlock(current, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER));
+        if (!hasBackup && hasIncompleteEmbeddedBlock) {
+            messages.push(
+                '  Plan: Aborted — incomplete embedded Plan block has no recoverable backup; file preserved',
+            );
+            return false;
+        }
+        let content: string;
+        if (hasBackup && hasAnyManagedBlock) {
+            content = existingBackup!;
+            messages.push('  Plan: Preserved existing backup');
         } else {
-            await fs.copyFile(extensionJsPath, backupPath);
-            messages.push(`  Plan: Backup created: ${backupPath}`);
+            content = stripBlock(current, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER);
+            content = stripBlock(content, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER);
+            await atomicWrite(backupPath, content);
+            messages.push(`  Plan: Backup refreshed: ${backupPath}`);
         }
 
-        let content = await fs.readFile(extensionJsPath, 'utf-8');
+        const leaveUnsupportedPlanClean = async (message: string): Promise<false> => {
+            messages.push(message);
+            if (hasAnyManagedBlock) {
+                await atomicWrite(extensionJsPath, content);
+                messages.push('  Plan: Removed stale Plan injection from unsupported template');
+            }
+            return false;
+        };
 
         // Find the Plan Preview template by its unique anchor
         const anchorIdx = content.indexOf(PLAN_TEMPLATE_ANCHOR);
         if (anchorIdx === -1) {
-            messages.push('  Plan: Plan Preview template not found in extension.js (older Claude Code version?)');
-            return false;
+            return leaveUnsupportedPlanClean('  Plan: Plan Preview template not found in extension.js (older Claude Code version?)');
         }
 
         // Find </style> before the anchor — this is the plan template's style block
         const styleEndTag = '</style>';
         const styleEndIdx = content.lastIndexOf(styleEndTag, anchorIdx);
         if (styleEndIdx === -1) {
-            messages.push('  Plan: Could not locate </style> in Plan Preview template');
-            return false;
+            return leaveUnsupportedPlanClean('  Plan: Could not locate </style> in Plan Preview template');
+        }
+
+        const readyMsg = "vscode.postMessage({ type: 'ready' })";
+        const readyIdx = jsContent ? content.indexOf(readyMsg, anchorIdx) : -1;
+        if (jsContent && readyIdx === -1) {
+            return leaveUnsupportedPlanClean('  Plan: Could not locate JS injection point in Plan Preview template');
         }
 
         // Inject CSS before </style>
@@ -283,16 +406,11 @@ async function injectPlanPreview(
         if (jsContent) {
             // Re-find the anchor (position shifted after CSS injection)
             const newAnchorIdx = content.indexOf(PLAN_TEMPLATE_ANCHOR);
-            const readyMsg = "vscode.postMessage({ type: 'ready' })";
-            const readyIdx = content.indexOf(readyMsg, newAnchorIdx);
-            if (readyIdx === -1) {
-                messages.push('  Plan: Could not locate JS injection point in Plan Preview template');
-            } else {
-                content = content.substring(0, readyIdx) +
-                    jsContent + '\n      ' +
-                    content.substring(readyIdx);
-                messages.push('  Plan: RTL JS injected into Plan Preview');
-            }
+            const shiftedReadyIdx = content.indexOf(readyMsg, newAnchorIdx);
+            content = content.substring(0, shiftedReadyIdx) +
+                jsContent + '\n      ' +
+                content.substring(shiftedReadyIdx);
+            messages.push('  Plan: RTL JS injected into Plan Preview');
         }
 
         // Corruption guard: Plan Preview injection only inserts content, so the
@@ -324,10 +442,116 @@ async function isPlanPreviewInstalled(extensionJsPath: string | null): Promise<b
     if (!extensionJsPath) return false;
     try {
         const content = await fs.readFile(extensionJsPath, 'utf-8');
-        return content.includes(PLAN_CSS_START_MARKER);
+        return hasCompleteBlock(content, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER);
     } catch {
         return false;
     }
+}
+
+async function getPlanPreviewMode(extensionJsPath: string | null): Promise<Exclude<RtlMode, 'inactive'> | null> {
+    if (!extensionJsPath) return null;
+    try {
+        const content = await fs.readFile(extensionJsPath, 'utf-8');
+        if (!hasCompleteBlock(content, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER)) return null;
+        if (content.includes(PLAN_CSS_MODE_AUTO_MARKER)) return 'auto';
+        if (content.includes(PLAN_CSS_MODE_LTR_MARKER)) return 'ltr';
+        if (content.includes(PLAN_CSS_MODE_ALWAYS_MARKER)) return 'always';
+        if (content.includes(PLAN_CSS_MODE_ACTIVE_MARKER)) return 'active';
+        return null;
+    } catch {
+        return null;
+    }
+}
+
+async function isPlanPreviewJsInstalled(extensionJsPath: string | null): Promise<boolean> {
+    if (!extensionJsPath) return false;
+    try {
+        const content = await fs.readFile(extensionJsPath, 'utf-8');
+        return hasCompleteBlock(content, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER);
+    } catch {
+        return false;
+    }
+}
+
+async function hasPlanCssManagedBlock(extensionJsPath: string | null): Promise<boolean> {
+    if (!extensionJsPath) return false;
+    try {
+        const content = await fs.readFile(extensionJsPath, 'utf-8');
+        return hasManagedBlock(content, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER);
+    } catch {
+        return false;
+    }
+}
+
+async function hasPlanJsManagedBlock(extensionJsPath: string | null): Promise<boolean> {
+    if (!extensionJsPath) return false;
+    try {
+        const content = await fs.readFile(extensionJsPath, 'utf-8');
+        return hasManagedBlock(content, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER);
+    } catch {
+        return false;
+    }
+}
+
+async function getPlanPreviewJsMode(extensionJsPath: string | null): Promise<'active' | 'auto' | null> {
+    if (!extensionJsPath) return null;
+    try {
+        const content = await fs.readFile(extensionJsPath, 'utf-8');
+        if (!hasCompleteBlock(content, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER)) return null;
+        if (content.includes(PLAN_JS_MODE_AUTO_MARKER)) return 'auto';
+        if (content.includes(PLAN_JS_MODE_ACTIVE_MARKER)) return 'active';
+        return null;
+    } catch {
+        return null;
+    }
+}
+
+async function isPlanPreviewSupported(extensionJsPath: string | null): Promise<boolean> {
+    if (!extensionJsPath) return false;
+    try {
+        const content = await fs.readFile(extensionJsPath, 'utf-8');
+        const anchorIdx = content.indexOf(PLAN_TEMPLATE_ANCHOR);
+        return anchorIdx !== -1 && content.lastIndexOf('</style>', anchorIdx) !== -1;
+    } catch {
+        return false;
+    }
+}
+
+async function isPlanPreviewInteractiveSupported(extensionJsPath: string | null): Promise<boolean> {
+    if (!extensionJsPath) return false;
+    try {
+        const content = await fs.readFile(extensionJsPath, 'utf-8');
+        const anchorIdx = content.indexOf(PLAN_TEMPLATE_ANCHOR);
+        return anchorIdx !== -1 &&
+            content.lastIndexOf('</style>', anchorIdx) !== -1 &&
+            content.indexOf("vscode.postMessage({ type: 'ready' })", anchorIdx) !== -1;
+    } catch {
+        return false;
+    }
+}
+
+/** Return whether every component available in this Claude installation is healthy. */
+export function isModeFullyInstalled(status: RtlStatus, expectedMode: RtlMode): boolean {
+    if (status.mode !== expectedMode) return false;
+    if (status.cssReadError || status.jsReadError || status.planPreviewReadError) return false;
+    if (expectedMode === 'inactive') {
+        return !status.cssManagedBlockPresent && !status.jsManagedBlockPresent &&
+            !status.planPreviewCssManagedBlockPresent && !status.planPreviewJsManagedBlockPresent;
+    }
+
+    const needsInteractiveJs = expectedMode === 'active' || expectedMode === 'auto';
+    if (needsInteractiveJs && status.extension.jsPath && !status.jsInstalled) return false;
+    if (needsInteractiveJs && status.extension.jsPath && status.jsMode !== expectedMode) return false;
+    if (!needsInteractiveJs && (status.jsManagedBlockPresent || status.planPreviewJsManagedBlockPresent)) return false;
+    const planSupported = needsInteractiveJs
+        ? status.planPreviewInteractiveSupported
+        : status.planPreviewSupported;
+    if ((status.planPreviewCssManagedBlockPresent || status.planPreviewJsManagedBlockPresent) && !planSupported) return false;
+    if (planSupported && !status.planPreviewInstalled) return false;
+    if (planSupported && status.planPreviewMode !== expectedMode) return false;
+    if (needsInteractiveJs && planSupported && !status.planPreviewJsInstalled) return false;
+    if (needsInteractiveJs && planSupported && status.planPreviewJsMode !== expectedMode) return false;
+    return true;
 }
 
 // ── Status ────────────────────────────────────────────────────────
@@ -340,11 +564,36 @@ export async function getStatus(extensions: ClaudeExtensionInfo[]): Promise<RtlS
 
     for (const ext of extensions) {
         let cssContent = '';
+        let cssReadError = false;
         try {
             cssContent = await fs.readFile(ext.cssPath, 'utf-8');
-        } catch { /* file unreadable — treat as not installed */ }
+        } catch {
+            cssReadError = true;
+        }
 
-        const cssInstalled = cssContent.includes(RTL_START_MARKER);
+        let jsReadError = false;
+        if (ext.jsPath) {
+            try {
+                await fs.readFile(ext.jsPath, 'utf-8');
+            } catch {
+                jsReadError = true;
+            }
+        }
+
+        let planPreviewReadError = false;
+        if (ext.extensionJsPath) {
+            try {
+                await fs.readFile(ext.extensionJsPath, 'utf-8');
+            } catch {
+                // An unreadable bundle is not the same as a readable older
+                // version without our anchors: injection/removal could not be
+                // verified, so the overall operation must remain incomplete.
+                planPreviewReadError = true;
+            }
+        }
+
+        const cssInstalled = hasCompleteBlock(cssContent, RTL_START_MARKER, RTL_END_MARKER);
+        const cssManagedBlockPresent = hasManagedBlock(cssContent, RTL_START_MARKER, RTL_END_MARKER);
         const autoMode = cssInstalled && cssContent.includes(RTL_MODE_AUTO_MARKER);
         const ltrMode = cssInstalled && !autoMode && cssContent.includes(RTL_MODE_LTR_MARKER);
         const alwaysMode = cssInstalled && !autoMode && !ltrMode && cssContent.includes(RTL_MODE_ALWAYS_MARKER);
@@ -352,8 +601,21 @@ export async function getStatus(extensions: ClaudeExtensionInfo[]): Promise<RtlS
         statuses.push({
             extension: ext,
             cssInstalled,
+            cssManagedBlockPresent,
+            cssReadError,
             jsInstalled: await isJsInstalled(ext.jsPath),
+            jsManagedBlockPresent: await hasJsManagedBlock(ext.jsPath),
+            jsMode: await getJsMode(ext.jsPath),
+            jsReadError,
             planPreviewInstalled: await isPlanPreviewInstalled(ext.extensionJsPath),
+            planPreviewCssManagedBlockPresent: await hasPlanCssManagedBlock(ext.extensionJsPath),
+            planPreviewMode: await getPlanPreviewMode(ext.extensionJsPath),
+            planPreviewJsInstalled: await isPlanPreviewJsInstalled(ext.extensionJsPath),
+            planPreviewJsManagedBlockPresent: await hasPlanJsManagedBlock(ext.extensionJsPath),
+            planPreviewJsMode: await getPlanPreviewJsMode(ext.extensionJsPath),
+            planPreviewSupported: await isPlanPreviewSupported(ext.extensionJsPath),
+            planPreviewInteractiveSupported: await isPlanPreviewInteractiveSupported(ext.extensionJsPath),
+            planPreviewReadError,
             cssBackupExists: await exists(ext.cssPath + '.bak'),
             jsBackupExists: ext.jsPath ? await exists(ext.jsPath + '.bak') : false,
             mode: autoMode ? 'auto' : ltrMode ? 'ltr' : alwaysMode ? 'always' : cssInstalled ? 'active' : 'inactive',
@@ -372,14 +634,14 @@ async function addRtlImpl(ext: ClaudeExtensionInfo, fonts?: FontOptions): Promis
     const messages: string[] = [];
     let changed = false;
 
-    if (await injectFile(ext.cssPath, generateActiveCssRules(fonts), 'CSS', messages)) {
+    if (await injectFile(ext.cssPath, generateActiveCssRules(fonts), RTL_START_MARKER, RTL_END_MARKER, 'CSS', messages)) {
         messages.push(`  CSS: RTL support added to ${ext.name}`);
         changed = true;
     }
 
     if (!ext.jsPath) {
         messages.push('  JS:  index.js not found, skipping button injection');
-    } else if (await injectFile(ext.jsPath, RTL_JS_CODE, 'JS', messages)) {
+    } else if (await injectFile(ext.jsPath, RTL_JS_CODE, JS_START_MARKER, JS_END_MARKER, 'JS', messages)) {
         messages.push(`  JS:  Toggle button added to ${ext.name}`);
         changed = true;
     }
@@ -398,13 +660,13 @@ async function addRtlAlwaysImpl(ext: ClaudeExtensionInfo, fonts?: FontOptions): 
     const messages: string[] = [];
     let changed = false;
 
-    if (await injectFile(ext.cssPath, generateAlwaysCssRules(fonts), 'CSS', messages)) {
+    if (await injectFile(ext.cssPath, generateAlwaysCssRules(fonts), RTL_START_MARKER, RTL_END_MARKER, 'CSS', messages)) {
         messages.push(`  CSS: RTL Always support added to ${ext.name}`);
         changed = true;
     }
 
     // Remove JS button if installed
-    if (ext.jsPath && await isJsInstalled(ext.jsPath)) {
+    if (ext.jsPath && await hasJsManagedBlock(ext.jsPath)) {
         if (await restoreAndDeleteBackup(ext.jsPath, 'JS', messages)) {
             changed = true;
         }
@@ -426,14 +688,14 @@ async function addRtlAutoImpl(ext: ClaudeExtensionInfo, fonts?: FontOptions): Pr
     const messages: string[] = [];
     let changed = false;
 
-    if (await injectFile(ext.cssPath, generateAutoCssRules(fonts), 'CSS', messages)) {
+    if (await injectFile(ext.cssPath, generateAutoCssRules(fonts), RTL_START_MARKER, RTL_END_MARKER, 'CSS', messages)) {
         messages.push(`  CSS: RTL Auto support added to ${ext.name}`);
         changed = true;
     }
 
     if (!ext.jsPath) {
         messages.push('  JS:  index.js not found, skipping auto-detection injection');
-    } else if (await injectFile(ext.jsPath, RTL_AUTO_JS_CODE, 'JS', messages)) {
+    } else if (await injectFile(ext.jsPath, RTL_AUTO_JS_CODE, JS_START_MARKER, JS_END_MARKER, 'JS', messages)) {
         messages.push(`  JS:  Auto-detection script added to ${ext.name}`);
         changed = true;
     }
@@ -454,13 +716,13 @@ async function addLtrAlwaysImpl(ext: ClaudeExtensionInfo, fonts?: FontOptions): 
     const messages: string[] = [];
     let changed = false;
 
-    if (await injectFile(ext.cssPath, generateLtrCssRules(fonts), 'CSS', messages)) {
+    if (await injectFile(ext.cssPath, generateLtrCssRules(fonts), RTL_START_MARKER, RTL_END_MARKER, 'CSS', messages)) {
         messages.push(`  CSS: LTR Always support added to ${ext.name}`);
         changed = true;
     }
 
     // Remove JS button if installed
-    if (ext.jsPath && await isJsInstalled(ext.jsPath)) {
+    if (ext.jsPath && await hasJsManagedBlock(ext.jsPath)) {
         if (await restoreAndDeleteBackup(ext.jsPath, 'JS', messages)) {
             changed = true;
         }
@@ -489,6 +751,7 @@ async function removeInjected(
     label: string,
     extName: string,
     messages: string[],
+    truncateIncompleteTail = true,
 ): Promise<boolean> {
     if (!isInstalled) {
         messages.push(`  ${label}: RTL not installed in ${extName}`);
@@ -503,7 +766,11 @@ async function removeInjected(
     // Fallback: manual marker removal
     try {
         const content = await fs.readFile(filePath, 'utf-8');
-        const cleaned = stripBlock(content, startMarker, endMarker);
+        if (!truncateIncompleteTail && !hasCompleteBlock(content, startMarker, endMarker)) {
+            messages.push(`  ${label}: Aborted — incomplete embedded block has no recoverable backup; file preserved`);
+            return false;
+        }
+        const cleaned = stripBlock(content, startMarker, endMarker, truncateIncompleteTail);
         await atomicWrite(filePath, cleaned);
         messages.push(`  ${label}: RTL removed from ${extName}`);
         return true;
@@ -520,21 +787,39 @@ async function removeRtlImpl(ext: ClaudeExtensionInfo): Promise<InjectionResult>
     const messages: string[] = [];
     let changed = false;
 
-    if (await removeInjected(ext.cssPath, await isCssInstalled(ext.cssPath), RTL_START_MARKER, RTL_END_MARKER, 'CSS', ext.name, messages)) {
+    const cssContent = await fs.readFile(ext.cssPath, 'utf-8').catch(() => '');
+    if (await removeInjected(ext.cssPath, hasManagedBlock(cssContent, RTL_START_MARKER, RTL_END_MARKER), RTL_START_MARKER, RTL_END_MARKER, 'CSS', ext.name, messages)) {
         changed = true;
     }
 
-    const jsInstalled = ext.jsPath ? await isJsInstalled(ext.jsPath) : false;
-    if (!ext.jsPath || !jsInstalled) {
+    const jsManaged = ext.jsPath ? await hasJsManagedBlock(ext.jsPath) : false;
+    if (!ext.jsPath || !jsManaged) {
         messages.push(`  JS:  Button not installed in ${ext.name}`);
-    } else if (await removeInjected(ext.jsPath, jsInstalled, JS_START_MARKER, JS_END_MARKER, 'JS', ext.name, messages)) {
+    } else if (await removeInjected(ext.jsPath, jsManaged, JS_START_MARKER, JS_END_MARKER, 'JS', ext.name, messages)) {
         changed = true;
     }
 
     // Restore extension.js (Plan Preview) from backup
-    if (ext.extensionJsPath && await isPlanPreviewInstalled(ext.extensionJsPath)) {
+    if (ext.extensionJsPath && (await hasPlanCssManagedBlock(ext.extensionJsPath) || await hasPlanJsManagedBlock(ext.extensionJsPath))) {
         if (await restoreAndDeleteBackup(ext.extensionJsPath, 'Plan', messages)) {
             changed = true;
+        } else {
+            const planContent = await fs.readFile(ext.extensionJsPath, 'utf-8').catch(() => '');
+            const hasIncompleteEmbeddedBlock =
+                (hasManagedBlock(planContent, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER) &&
+                    !hasCompleteBlock(planContent, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER)) ||
+                (hasManagedBlock(planContent, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER) &&
+                    !hasCompleteBlock(planContent, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER));
+            if (hasIncompleteEmbeddedBlock) {
+                messages.push('  Plan: Aborted removal — incomplete embedded block has no recoverable backup; file preserved');
+            } else {
+                const cssRemoved = await removeInjected(ext.extensionJsPath, true, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER, 'Plan CSS', ext.name, messages, false);
+                const jsStillManaged = await hasPlanJsManagedBlock(ext.extensionJsPath);
+                const jsRemoved = jsStillManaged
+                    ? await removeInjected(ext.extensionJsPath, true, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER, 'Plan JS', ext.name, messages, false)
+                    : false;
+                if (cssRemoved || jsRemoved) changed = true;
+            }
         }
     }
 
