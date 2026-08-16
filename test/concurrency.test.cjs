@@ -21,7 +21,7 @@ process.env.NODE_ENV = 'test';
 process.env.RTL_TEST_LOCK_TIMEOUT_MS = '250';
 const { addRtlAuto, addRtlAlways, removeRtl, getStatus, isModeFullyInstalled } = require('../out-test/injector.js');
 const {
-  PLAN_CSS_START_MARKER, PLAN_JS_START_MARKER, RTL_AUTO_JS_CODE,
+  PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER, RTL_AUTO_JS_CODE,
   JS_MODE_ACTIVE_MARKER, JS_MODE_AUTO_MARKER,
   PLAN_JS_MODE_ACTIVE_MARKER, PLAN_JS_MODE_AUTO_MARKER,
   PLAN_CSS_MODE_ALWAYS_MARKER, PLAN_CSS_MODE_LTR_MARKER,
@@ -143,6 +143,24 @@ async function main() {
   assert.ok(!isModeFullyInstalled({ ...healthy, jsInstalled: false }, 'auto'), 'Auto mode ignored missing webview JS');
   assert.ok(!isModeFullyInstalled({ ...healthy, planPreviewJsInstalled: false }, 'auto'), 'Auto mode ignored missing Plan JS');
   assert.ok(!isModeFullyInstalled({ ...healthy, mode: 'inactive', planPreviewJsInstalled: true }, 'inactive'), 'Inactive mode ignored leftover Plan JS');
+
+  const completeJs = await fs.readFile(jsPath, 'utf-8');
+  await fs.writeFile(jsPath, completeJs.slice(0, completeJs.indexOf('/* End RTL Toggle Button */')));
+  const [truncatedJsStatus] = await getStatus([ext]);
+  assert.strictEqual(truncatedJsStatus.jsInstalled, false, 'JS without end marker reported installed');
+  assert.ok(!isModeFullyInstalled(truncatedJsStatus, 'auto'), 'truncated JS block reported healthy');
+  await addRtlAuto(ext);
+  assert.ok((await fs.readFile(jsPath, 'utf-8')).includes('/* End RTL Toggle Button */'), 'truncated JS was not repaired');
+
+  const completePlanBlocks = await fs.readFile(extensionJsPath, 'utf-8');
+  const planJsEnd = completePlanBlocks.indexOf(PLAN_JS_END_MARKER);
+  await fs.writeFile(extensionJsPath, completePlanBlocks.slice(0, planJsEnd));
+  const [truncatedPlanBlockStatus] = await getStatus([ext]);
+  assert.strictEqual(truncatedPlanBlockStatus.planPreviewJsInstalled, false, 'Plan JS without end marker reported installed');
+  assert.ok(!isModeFullyInstalled(truncatedPlanBlockStatus, 'auto'), 'truncated Plan JS block reported healthy');
+  await addRtlAuto(ext);
+  const repairedPlanBlocks = await fs.readFile(extensionJsPath, 'utf-8');
+  assert.ok(repairedPlanBlocks.includes(PLAN_CSS_END_MARKER) && repairedPlanBlocks.includes(PLAN_JS_END_MARKER), 'truncated Plan blocks were not repaired');
 
   await fs.writeFile(jsPath, (await fs.readFile(jsPath, 'utf-8')).replace(JS_MODE_AUTO_MARKER, JS_MODE_ACTIVE_MARKER));
   await fs.writeFile(extensionJsPath, (await fs.readFile(extensionJsPath, 'utf-8')).replace(PLAN_JS_MODE_AUTO_MARKER, PLAN_JS_MODE_ACTIVE_MARKER));

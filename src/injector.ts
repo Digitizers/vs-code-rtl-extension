@@ -33,6 +33,11 @@ async function exists(p: string): Promise<boolean> {
     }
 }
 
+function hasCompleteBlock(content: string, startMarker: string, endMarker: string): boolean {
+    const startIdx = content.indexOf(startMarker);
+    return startIdx !== -1 && content.indexOf(endMarker, startIdx + startMarker.length) !== -1;
+}
+
 // ── Concurrency-safe file IO ──────────────────────────────────────
 
 function delay(ms: number): Promise<void> {
@@ -115,7 +120,7 @@ async function atomicWrite(filePath: string, data: string): Promise<void> {
 export async function isCssInstalled(cssPath: string): Promise<boolean> {
     try {
         const content = await fs.readFile(cssPath, 'utf-8');
-        return content.includes(RTL_START_MARKER);
+        return hasCompleteBlock(content, RTL_START_MARKER, RTL_END_MARKER);
     } catch {
         return false;
     }
@@ -128,7 +133,7 @@ async function isJsInstalled(jsPath: string | null): Promise<boolean> {
     if (!jsPath) return false;
     try {
         const content = await fs.readFile(jsPath, 'utf-8');
-        return content.includes(JS_START_MARKER);
+        return hasCompleteBlock(content, JS_START_MARKER, JS_END_MARKER);
     } catch {
         return false;
     }
@@ -138,7 +143,7 @@ async function getJsMode(jsPath: string | null): Promise<'active' | 'auto' | nul
     if (!jsPath) return null;
     try {
         const content = await fs.readFile(jsPath, 'utf-8');
-        if (!content.includes(JS_START_MARKER)) return null;
+        if (!hasCompleteBlock(content, JS_START_MARKER, JS_END_MARKER)) return null;
         if (content.includes(JS_MODE_AUTO_MARKER)) return 'auto';
         if (content.includes(JS_MODE_ACTIVE_MARKER)) return 'active';
         return null;
@@ -152,7 +157,7 @@ async function getJsMode(jsPath: string | null): Promise<'active' | 'auto' | nul
  */
 function stripBlock(content: string, startMarker: string, endMarker: string): string {
     const startIdx = content.indexOf(startMarker);
-    const endIdx = content.indexOf(endMarker);
+    const endIdx = startIdx === -1 ? -1 : content.indexOf(endMarker, startIdx + startMarker.length);
     if (startIdx === -1 || endIdx === -1) return content;
 
     let actualStart = startIdx;
@@ -384,7 +389,7 @@ async function isPlanPreviewInstalled(extensionJsPath: string | null): Promise<b
     if (!extensionJsPath) return false;
     try {
         const content = await fs.readFile(extensionJsPath, 'utf-8');
-        return content.includes(PLAN_CSS_START_MARKER);
+        return hasCompleteBlock(content, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER);
     } catch {
         return false;
     }
@@ -394,7 +399,7 @@ async function getPlanPreviewMode(extensionJsPath: string | null): Promise<Exclu
     if (!extensionJsPath) return null;
     try {
         const content = await fs.readFile(extensionJsPath, 'utf-8');
-        if (!content.includes(PLAN_CSS_START_MARKER)) return null;
+        if (!hasCompleteBlock(content, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER)) return null;
         if (content.includes(PLAN_CSS_MODE_AUTO_MARKER)) return 'auto';
         if (content.includes(PLAN_CSS_MODE_LTR_MARKER)) return 'ltr';
         if (content.includes(PLAN_CSS_MODE_ALWAYS_MARKER)) return 'always';
@@ -409,7 +414,7 @@ async function isPlanPreviewJsInstalled(extensionJsPath: string | null): Promise
     if (!extensionJsPath) return false;
     try {
         const content = await fs.readFile(extensionJsPath, 'utf-8');
-        return content.includes(PLAN_JS_START_MARKER);
+        return hasCompleteBlock(content, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER);
     } catch {
         return false;
     }
@@ -419,7 +424,7 @@ async function getPlanPreviewJsMode(extensionJsPath: string | null): Promise<'ac
     if (!extensionJsPath) return null;
     try {
         const content = await fs.readFile(extensionJsPath, 'utf-8');
-        if (!content.includes(PLAN_JS_START_MARKER)) return null;
+        if (!hasCompleteBlock(content, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER)) return null;
         if (content.includes(PLAN_JS_MODE_AUTO_MARKER)) return 'auto';
         if (content.includes(PLAN_JS_MODE_ACTIVE_MARKER)) return 'active';
         return null;
@@ -488,7 +493,7 @@ export async function getStatus(extensions: ClaudeExtensionInfo[]): Promise<RtlS
             cssContent = await fs.readFile(ext.cssPath, 'utf-8');
         } catch { /* file unreadable — treat as not installed */ }
 
-        const cssInstalled = cssContent.includes(RTL_START_MARKER);
+        const cssInstalled = hasCompleteBlock(cssContent, RTL_START_MARKER, RTL_END_MARKER);
         const autoMode = cssInstalled && cssContent.includes(RTL_MODE_AUTO_MARKER);
         const ltrMode = cssInstalled && !autoMode && cssContent.includes(RTL_MODE_LTR_MARKER);
         const alwaysMode = cssInstalled && !autoMode && !ltrMode && cssContent.includes(RTL_MODE_ALWAYS_MARKER);
