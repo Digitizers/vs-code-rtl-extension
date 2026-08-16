@@ -89,7 +89,7 @@ async function main() {
   // 4. No lock / temp litter left behind.
   const leftovers = (await fs.readdir(extDir))
     .concat(await fs.readdir(webview))
-    .filter((f) => f.includes('.ybyrtl.lock') || f.includes('.ybyrtl.recovery.lock') || f.includes('.ybytmp'));
+    .filter((f) => f.includes('.ybyrtl.lock') || f.includes('.ybytmp'));
   assert.strictEqual(leftovers.length, 0, `leftover lock/tmp files: ${leftovers}`);
 
   // 5. If an injected file is truncated, its known-good backup wins instead of

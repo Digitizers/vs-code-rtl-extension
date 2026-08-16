@@ -92,8 +92,8 @@ if (!/Timed out waiting for RTL file lock/.test(injectorSrc)) {
 if (!/process\.kill\(pid, 0\)/.test(injectorSrc)) {
     failures.push('stale-lock cleanup no longer checks whether the owner process is alive');
 }
-if (!/\.ybyrtl\.recovery\.lock/.test(injectorSrc)) {
-    failures.push('stale-lock reclamation is no longer serialized by a recovery lock');
+if (!/fs\.link\(lockPath, claimPath\)/.test(injectorSrc) || !/claimedStat\.ino === currentStat\.ino/.test(injectorSrc)) {
+    failures.push('stale-lock reclamation no longer claims and verifies the exact inode');
 }
 
 if (failures.length) {

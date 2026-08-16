@@ -51,7 +51,6 @@ function delay(ms: number): Promise<void> {
  */
 async function withFileLock<T>(lockDir: string, fn: () => Promise<T>): Promise<T> {
     const lockPath = path.join(lockDir, '.ybyrtl.lock');
-    const recoveryPath = path.join(lockDir, '.ybyrtl.recovery.lock');
     const STALE_MS = 30_000;
     const RETRY_MS = 100;
     const MAX_WAIT_MS = 20_000;
@@ -59,80 +58,59 @@ async function withFileLock<T>(lockDir: string, fn: () => Promise<T>): Promise<T
     let handle: fs.FileHandle | undefined;
     const start = Date.now();
     while (true) {
-        // A stale-lock reclaimer temporarily blocks ordinary acquisition. A
-        // winner that raced past this check verifies again after open below.
-        if (await exists(recoveryPath)) {
-            if (Date.now() - start > MAX_WAIT_MS) {
-                throw new Error(`Timed out waiting for RTL recovery lock: ${recoveryPath}`);
-            }
-            await delay(RETRY_MS);
-            continue;
-        }
         try {
             handle = await fs.open(lockPath, 'wx'); // exclusive create — fails if held
-            if (await exists(recoveryPath)) {
-                await handle.close();
-                handle = undefined;
-                await fs.rm(lockPath, { force: true });
-                await delay(RETRY_MS);
-                continue;
-            }
             await handle.writeFile(String(process.pid));
             break;
         } catch (e) {
             const err = e as NodeJS.ErrnoException;
             if (err.code !== 'EEXIST') throw err;
-            try {
-                const st = await fs.stat(lockPath);
-                const pidText = await fs.readFile(lockPath, 'utf-8').catch(() => '');
-                const pid = Number.parseInt(pidText, 10);
-                let ownerAlive = Number.isInteger(pid) && pid > 0;
-                if (ownerAlive) {
-                    try {
-                        process.kill(pid, 0);
-                    } catch (ownerError) {
-                        const code = (ownerError as NodeJS.ErrnoException).code;
-                        ownerAlive = code === 'EPERM';
-                    }
-                }
-                if (Date.now() - st.mtimeMs > STALE_MS && !ownerAlive) {
-                    let recoveryHandle: fs.FileHandle | undefined;
-                    try {
-                        recoveryHandle = await fs.open(recoveryPath, 'wx');
-                        await recoveryHandle.writeFile(String(process.pid));
 
-                        // Re-read while owning the recovery lock. Another
-                        // reclaimer may already have replaced the stale lock.
-                        const latestStat = await fs.stat(lockPath);
-                        const latestPidText = await fs.readFile(lockPath, 'utf-8').catch(() => '');
-                        const latestPid = Number.parseInt(latestPidText, 10);
-                        let latestOwnerAlive = Number.isInteger(latestPid) && latestPid > 0;
-                        if (latestOwnerAlive) {
-                            try {
-                                process.kill(latestPid, 0);
-                            } catch (latestOwnerError) {
-                                latestOwnerAlive = (latestOwnerError as NodeJS.ErrnoException).code === 'EPERM';
-                            }
-                        }
-                        if (Date.now() - latestStat.mtimeMs > STALE_MS && !latestOwnerAlive) {
-                            await fs.rm(lockPath, { force: true });
-                        }
-                    } catch (recoveryError) {
-                        if ((recoveryError as NodeJS.ErrnoException).code !== 'EEXIST' &&
-                            (recoveryError as NodeJS.ErrnoException).code !== 'ENOENT') {
-                            throw recoveryError;
-                        }
-                    } finally {
-                        if (recoveryHandle) {
-                            await recoveryHandle.close().catch(() => { /* ignore */ });
-                            await fs.rm(recoveryPath, { force: true }).catch(() => { /* ignore */ });
-                        }
-                    }
-                    continue;
-                }
-            } catch {
-                continue; // lock vanished between open and stat — retry
+            let st: Awaited<ReturnType<typeof fs.stat>>;
+            let pidText: string;
+            try {
+                [st, pidText] = await Promise.all([
+                    fs.stat(lockPath),
+                    fs.readFile(lockPath, 'utf-8'),
+                ]);
+            } catch (inspectError) {
+                if ((inspectError as NodeJS.ErrnoException).code === 'ENOENT') continue;
+                throw inspectError;
             }
+
+            const pid = Number.parseInt(pidText, 10);
+            let ownerAlive = Number.isInteger(pid) && pid > 0;
+            if (ownerAlive) {
+                try {
+                    process.kill(pid, 0);
+                } catch (ownerError) {
+                    ownerAlive = (ownerError as NodeJS.ErrnoException).code === 'EPERM';
+                }
+            }
+
+            if (Date.now() - st.mtimeMs > STALE_MS && !ownerAlive) {
+                // Claim the exact stale inode with a hard link. If another
+                // process replaces lockPath first, the inode comparison fails
+                // and we cannot unlink its fresh lock.
+                const claimPath = `${lockPath}.claim.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}`;
+                try {
+                    await fs.link(lockPath, claimPath);
+                    const [claimedStat, currentStat] = await Promise.all([
+                        fs.stat(claimPath),
+                        fs.stat(lockPath),
+                    ]);
+                    if (claimedStat.dev === currentStat.dev && claimedStat.ino === currentStat.ino) {
+                        await fs.rm(lockPath, { force: true });
+                    }
+                } catch (claimError) {
+                    const code = (claimError as NodeJS.ErrnoException).code;
+                    if (code !== 'ENOENT' && code !== 'EEXIST') throw claimError;
+                } finally {
+                    await fs.rm(claimPath, { force: true }).catch(() => { /* ignore */ });
+                }
+                continue;
+            }
+
             if (Date.now() - start > MAX_WAIT_MS) {
                 throw new Error(`Timed out waiting for RTL file lock: ${lockPath}`);
             }
