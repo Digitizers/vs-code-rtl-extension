@@ -185,9 +185,20 @@ async function injectFile(
         const backupPath = filePath + '.bak';
 
         const current = await fs.readFile(filePath, 'utf-8');
-        const pristine = stripBlock(current, startMarker, endMarker);
-        await atomicWrite(backupPath, pristine);
-        messages.push(`  ${label}: Backup refreshed: ${backupPath}`);
+        const hasManagedBlock = current.includes(startMarker);
+        const hasBackup = await exists(backupPath);
+        // If our markers are still present, the current file may be a torn
+        // result from an earlier race. Preserve and use the known-good backup.
+        // A clean vendor replacement has no markers and safely refreshes it.
+        const pristine = hasManagedBlock && hasBackup
+            ? await fs.readFile(backupPath, 'utf-8')
+            : stripBlock(current, startMarker, endMarker);
+        if (!hasManagedBlock || !hasBackup) {
+            await atomicWrite(backupPath, pristine);
+            messages.push(`  ${label}: Backup refreshed: ${backupPath}`);
+        } else {
+            messages.push(`  ${label}: Preserved existing backup`);
+        }
 
         // Keep exactly one owned separator before the marked block and no
         // trailing whitespace after it, so stripBlock restores byte-for-byte.
@@ -262,10 +273,18 @@ async function injectPlanPreview(
         const backupPath = extensionJsPath + '.bak';
 
         const current = await fs.readFile(extensionJsPath, 'utf-8');
-        let content = stripBlock(current, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER);
-        content = stripBlock(content, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER);
-        await atomicWrite(backupPath, content);
-        messages.push(`  Plan: Backup refreshed: ${backupPath}`);
+        const hasManagedBlock = current.includes(PLAN_CSS_START_MARKER) || current.includes(PLAN_JS_START_MARKER);
+        const hasBackup = await exists(backupPath);
+        let content: string;
+        if (hasManagedBlock && hasBackup) {
+            content = await fs.readFile(backupPath, 'utf-8');
+            messages.push('  Plan: Preserved existing backup');
+        } else {
+            content = stripBlock(current, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER);
+            content = stripBlock(content, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER);
+            await atomicWrite(backupPath, content);
+            messages.push(`  Plan: Backup refreshed: ${backupPath}`);
+        }
 
         // Find the Plan Preview template by its unique anchor
         const anchorIdx = content.indexOf(PLAN_TEMPLATE_ANCHOR);
@@ -348,6 +367,16 @@ async function isPlanPreviewJsInstalled(extensionJsPath: string | null): Promise
     }
 }
 
+async function isPlanPreviewSupported(extensionJsPath: string | null): Promise<boolean> {
+    if (!extensionJsPath) return false;
+    try {
+        const content = await fs.readFile(extensionJsPath, 'utf-8');
+        return content.includes(PLAN_TEMPLATE_ANCHOR);
+    } catch {
+        return false;
+    }
+}
+
 /** Return whether every component available in this Claude installation is healthy. */
 export function isModeFullyInstalled(status: RtlStatus, expectedMode: RtlMode): boolean {
     if (status.mode !== expectedMode) return false;
@@ -357,8 +386,8 @@ export function isModeFullyInstalled(status: RtlStatus, expectedMode: RtlMode): 
 
     const needsInteractiveJs = expectedMode === 'active' || expectedMode === 'auto';
     if (needsInteractiveJs && status.extension.jsPath && !status.jsInstalled) return false;
-    if (status.extension.extensionJsPath && !status.planPreviewInstalled) return false;
-    if (needsInteractiveJs && status.extension.extensionJsPath && !status.planPreviewJsInstalled) return false;
+    if (status.planPreviewSupported && !status.planPreviewInstalled) return false;
+    if (needsInteractiveJs && status.planPreviewSupported && !status.planPreviewJsInstalled) return false;
     return true;
 }
 
@@ -387,6 +416,7 @@ export async function getStatus(extensions: ClaudeExtensionInfo[]): Promise<RtlS
             jsInstalled: await isJsInstalled(ext.jsPath),
             planPreviewInstalled: await isPlanPreviewInstalled(ext.extensionJsPath),
             planPreviewJsInstalled: await isPlanPreviewJsInstalled(ext.extensionJsPath),
+            planPreviewSupported: await isPlanPreviewSupported(ext.extensionJsPath),
             cssBackupExists: await exists(ext.cssPath + '.bak'),
             jsBackupExists: ext.jsPath ? await exists(ext.jsPath + '.bak') : false,
             mode: autoMode ? 'auto' : ltrMode ? 'ltr' : alwaysMode ? 'always' : cssInstalled ? 'active' : 'inactive',

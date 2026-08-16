@@ -18,7 +18,7 @@ const path = require('path');
 const os = require('os');
 const assert = require('assert');
 const { addRtlAuto, removeRtl, getStatus, isModeFullyInstalled } = require('../out-test/injector.js');
-const { PLAN_CSS_START_MARKER, PLAN_JS_START_MARKER } = require('../out-test/content.js');
+const { PLAN_CSS_START_MARKER, PLAN_JS_START_MARKER, RTL_AUTO_JS_CODE } = require('../out-test/content.js');
 
 async function main() {
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'ccrtl-race-'));
@@ -85,7 +85,14 @@ async function main() {
     .filter((f) => f.includes('.ybyrtl.lock') || f.includes('.ybytmp'));
   assert.strictEqual(leftovers.length, 0, `leftover lock/tmp files: ${leftovers}`);
 
-  // 5. A vendor update in the same directory replaces stale backups instead of
+  // 5. If an injected file is truncated, its known-good backup wins instead of
+  //    being replaced by the corrupt marker-bearing file.
+  await fs.writeFile(jsPath, '/* truncated vendor bundle */\n' + RTL_AUTO_JS_CODE);
+  await addRtlAuto(ext);
+  assert.ok((await fs.readFile(jsPath, 'utf-8')).includes('claude code webview bundle'), 'known-good JS backup was not used');
+  assert.strictEqual((await fs.stat(jsPath + '.bak')).size, origJs, 'corrupt marker-bearing file replaced JS backup');
+
+  // 6. A clean vendor update in the same directory replaces stale backups instead of
   //    being overwritten by them during reinjection.
   const updatedJs = '/* updated vendor webview */\n' + 'b'.repeat(1_000_000);
   const updatedCss = ':root{--vendor-version:2}\n';
@@ -109,7 +116,16 @@ async function main() {
   assert.ok(!isModeFullyInstalled({ ...healthy, planPreviewJsInstalled: false }, 'auto'), 'Auto mode ignored missing Plan JS');
   assert.ok(!isModeFullyInstalled({ ...healthy, mode: 'inactive', planPreviewJsInstalled: true }, 'inactive'), 'Inactive mode ignored leftover Plan JS');
 
-  // 6. removeRtl strips Plan markers even when its backup has gone missing.
+  // 7. Older Claude versions without the Plan Preview template remain healthy.
+  const unsupportedPlan = path.join(extDir, 'unsupported-extension.js');
+  await fs.writeFile(unsupportedPlan, 'module.exports = {};\n');
+  const unsupportedExt = { ...ext, extensionJsPath: unsupportedPlan };
+  await addRtlAuto(unsupportedExt);
+  const [unsupportedStatus] = await getStatus([unsupportedExt]);
+  assert.strictEqual(unsupportedStatus.planPreviewSupported, false, 'unsupported Plan template reported supported');
+  assert.ok(isModeFullyInstalled(unsupportedStatus, 'auto'), 'unsupported optional Plan template made Auto unhealthy');
+
+  // 8. removeRtl strips Plan markers even when its backup has gone missing.
   await fs.rm(extensionJsPath + '.bak');
   await removeRtl(ext);
   const restoredJs = (await fs.stat(jsPath)).size;

@@ -23,6 +23,8 @@ export interface RtlStatus {
     planPreviewInstalled: boolean;
     /** Whether Plan Preview's interactive JS is installed (Active/Auto modes) */
     planPreviewJsInstalled: boolean;
+    /** Whether this Claude version contains the Plan Preview template we support */
+    planPreviewSupported: boolean;
     cssBackupExists: boolean;
     jsBackupExists: boolean;
     mode: RtlMode;
