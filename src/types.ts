@@ -22,6 +22,7 @@ export interface RtlStatus {
     jsInstalled: boolean;
     jsMode: 'active' | 'auto' | null;
     planPreviewInstalled: boolean;
+    planPreviewMode: Exclude<RtlMode, 'inactive'> | null;
     /** Whether Plan Preview's interactive JS is installed (Active/Auto modes) */
     planPreviewJsInstalled: boolean;
     planPreviewJsMode: 'active' | 'auto' | null;

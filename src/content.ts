@@ -640,6 +640,10 @@ ${JS_MODE_ACTIVE_MARKER}
 /** Markers for Plan Preview CSS injection inside extension.js */
 export const PLAN_CSS_START_MARKER = '/* RTL Plan Preview Start */';
 export const PLAN_CSS_END_MARKER = '/* RTL Plan Preview End */';
+export const PLAN_CSS_MODE_ACTIVE_MARKER = '/* RTL-PLAN-CSS-MODE: active */';
+export const PLAN_CSS_MODE_ALWAYS_MARKER = '/* RTL-PLAN-CSS-MODE: always */';
+export const PLAN_CSS_MODE_AUTO_MARKER = '/* RTL-PLAN-CSS-MODE: auto */';
+export const PLAN_CSS_MODE_LTR_MARKER = '/* RTL-PLAN-CSS-MODE: ltr */';
 export const PLAN_JS_START_MARKER = '/* RTL Plan Preview JS Start */';
 export const PLAN_JS_END_MARKER = '/* RTL Plan Preview JS End */';
 export const PLAN_JS_MODE_ACTIVE_MARKER = '/* RTL-PLAN-JS-MODE: active */';
@@ -725,6 +729,7 @@ const PLAN_RTL_ALWAYS_CSS = `
 /** Assembled Plan Preview CSS for Active mode — fonts scoped to #content (not .YBYrtl) so they apply regardless of toggle state */
 export function generatePlanActiveCss(fonts: FontOptions = NO_FONTS): string {
     return PLAN_CSS_START_MARKER + '\n' +
+        PLAN_CSS_MODE_ACTIVE_MARKER + '\n' +
         PLAN_BUTTON_CSS +
         PLAN_RTL_SCOPED_CSS +
         generatePlanFontCss(fonts) +
@@ -734,6 +739,7 @@ export function generatePlanActiveCss(fonts: FontOptions = NO_FONTS): string {
 /** Assembled Plan Preview CSS for Always mode */
 export function generatePlanAlwaysCss(fonts: FontOptions = NO_FONTS): string {
     return PLAN_CSS_START_MARKER + '\n' +
+        PLAN_CSS_MODE_ALWAYS_MARKER + '\n' +
         PLAN_RTL_ALWAYS_CSS +
         generatePlanFontCss(fonts) +
         '\n' + PLAN_CSS_END_MARKER;
@@ -760,6 +766,7 @@ const PLAN_LTR_ALWAYS_CSS = `
 /** Assembled Plan Preview CSS for LTR Always mode */
 export function generatePlanLtrCss(fonts: FontOptions = NO_FONTS): string {
     return PLAN_CSS_START_MARKER + '\n' +
+        PLAN_CSS_MODE_LTR_MARKER + '\n' +
         PLAN_LTR_ALWAYS_CSS +
         generatePlanFontCss(fonts) +
         '\n' + PLAN_CSS_END_MARKER;
@@ -768,6 +775,7 @@ export function generatePlanLtrCss(fonts: FontOptions = NO_FONTS): string {
 /** Assembled Plan Preview CSS for Auto mode — fonts always apply, RTL is per-content */
 export function generatePlanAutoCss(fonts: FontOptions = NO_FONTS): string {
     return PLAN_CSS_START_MARKER + '\n' +
+        PLAN_CSS_MODE_AUTO_MARKER + '\n' +
         PLAN_BUTTON_CSS +
         PLAN_RTL_SCOPED_CSS +
         generatePlanFontCss(fonts) +

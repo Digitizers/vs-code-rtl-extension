@@ -10,6 +10,8 @@ import {
     RTL_AUTO_JS_CODE,
     generateActiveCssRules, generateAlwaysCssRules, generateAutoCssRules, generateLtrCssRules,
     PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER,
+    PLAN_CSS_MODE_ACTIVE_MARKER, PLAN_CSS_MODE_ALWAYS_MARKER,
+    PLAN_CSS_MODE_AUTO_MARKER, PLAN_CSS_MODE_LTR_MARKER,
     PLAN_JS_START_MARKER, PLAN_JS_END_MARKER,
     PLAN_JS_MODE_ACTIVE_MARKER, PLAN_JS_MODE_AUTO_MARKER,
     generatePlanActiveCss, PLAN_ACTIVE_JS,
@@ -368,6 +370,21 @@ async function isPlanPreviewInstalled(extensionJsPath: string | null): Promise<b
     }
 }
 
+async function getPlanPreviewMode(extensionJsPath: string | null): Promise<Exclude<RtlMode, 'inactive'> | null> {
+    if (!extensionJsPath) return null;
+    try {
+        const content = await fs.readFile(extensionJsPath, 'utf-8');
+        if (!content.includes(PLAN_CSS_START_MARKER)) return null;
+        if (content.includes(PLAN_CSS_MODE_AUTO_MARKER)) return 'auto';
+        if (content.includes(PLAN_CSS_MODE_LTR_MARKER)) return 'ltr';
+        if (content.includes(PLAN_CSS_MODE_ALWAYS_MARKER)) return 'always';
+        if (content.includes(PLAN_CSS_MODE_ACTIVE_MARKER)) return 'active';
+        return null;
+    } catch {
+        return null;
+    }
+}
+
 async function isPlanPreviewJsInstalled(extensionJsPath: string | null): Promise<boolean> {
     if (!extensionJsPath) return false;
     try {
@@ -430,6 +447,7 @@ export function isModeFullyInstalled(status: RtlStatus, expectedMode: RtlMode): 
         ? status.planPreviewInteractiveSupported
         : status.planPreviewSupported;
     if (planSupported && !status.planPreviewInstalled) return false;
+    if (planSupported && status.planPreviewMode !== expectedMode) return false;
     if (needsInteractiveJs && planSupported && !status.planPreviewJsInstalled) return false;
     if (needsInteractiveJs && planSupported && status.planPreviewJsMode !== expectedMode) return false;
     return true;
@@ -460,6 +478,7 @@ export async function getStatus(extensions: ClaudeExtensionInfo[]): Promise<RtlS
             jsInstalled: await isJsInstalled(ext.jsPath),
             jsMode: await getJsMode(ext.jsPath),
             planPreviewInstalled: await isPlanPreviewInstalled(ext.extensionJsPath),
+            planPreviewMode: await getPlanPreviewMode(ext.extensionJsPath),
             planPreviewJsInstalled: await isPlanPreviewJsInstalled(ext.extensionJsPath),
             planPreviewJsMode: await getPlanPreviewJsMode(ext.extensionJsPath),
             planPreviewSupported: await isPlanPreviewSupported(ext.extensionJsPath),

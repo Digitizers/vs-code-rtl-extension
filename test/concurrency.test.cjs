@@ -24,6 +24,7 @@ const {
   PLAN_CSS_START_MARKER, PLAN_JS_START_MARKER, RTL_AUTO_JS_CODE,
   JS_MODE_ACTIVE_MARKER, JS_MODE_AUTO_MARKER,
   PLAN_JS_MODE_ACTIVE_MARKER, PLAN_JS_MODE_AUTO_MARKER,
+  PLAN_CSS_MODE_ALWAYS_MARKER, PLAN_CSS_MODE_LTR_MARKER,
 } = require('../out-test/content.js');
 
 async function main() {
@@ -175,6 +176,14 @@ async function main() {
   assert.strictEqual(incompleteAlways.mode, 'always', 'Always CSS mode was not installed');
   assert.ok(incompleteAlways.jsInstalled, 'test setup did not retain interactive JS');
   assert.ok(!isModeFullyInstalled(incompleteAlways, 'always'), 'Always mode ignored leftover interactive JS');
+
+  await fs.writeFile(
+    extensionJsPath,
+    (await fs.readFile(extensionJsPath, 'utf-8')).replace(PLAN_CSS_MODE_ALWAYS_MARKER, PLAN_CSS_MODE_LTR_MARKER),
+  );
+  const [wrongPlanCssMode] = await getStatus([ext]);
+  assert.strictEqual(wrongPlanCssMode.mode, 'always', 'test setup changed main CSS mode');
+  assert.ok(!isModeFullyInstalled(wrongPlanCssMode, 'always'), 'Always mode accepted LTR Plan CSS');
 
   // 9. removeRtl strips Plan markers even when its backup has gone missing.
   await fs.rm(extensionJsPath + '.bak');
