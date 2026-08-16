@@ -172,15 +172,22 @@ async function getJsMode(jsPath: string | null): Promise<'active' | 'auto' | nul
 function stripBlock(content: string, startMarker: string, endMarker: string): string {
     const startIdx = content.indexOf(startMarker);
     const endIdx = startIdx === -1 ? -1 : content.indexOf(endMarker, startIdx + startMarker.length);
-    if (startIdx === -1 || endIdx === -1) return content;
+    if (startIdx === -1) return content;
 
     let actualStart = startIdx;
-    const actualEnd = endIdx + endMarker.length;
 
     // Remove preceding newline if present
     if (actualStart > 0 && content[actualStart - 1] === '\n') {
         actualStart -= 1;
     }
+
+    // Appended injections own everything from their start marker onward. If a
+    // write was torn before the end marker, retaining that tail and appending a
+    // fresh block would make the old start pair with the new end and falsely
+    // report a healthy installation while leaving broken CSS/JS in place.
+    if (endIdx === -1) return content.substring(0, actualStart);
+
+    const actualEnd = endIdx + endMarker.length;
 
     return content.substring(0, actualStart) + content.substring(actualEnd);
 }

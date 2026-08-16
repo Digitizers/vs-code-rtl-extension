@@ -156,6 +156,17 @@ async function main() {
   assert.ok(isModeFullyInstalled(repairedStaticStatus, 'always'), 'static mode remained unhealthy after partial JS restore');
   await addRtlAuto(ext);
 
+  // If an appended block is torn and its backup is gone, discard the owned
+  // tail before reinjecting. Otherwise the old start marker can pair with the
+  // new end marker and conceal a syntactically broken fragment.
+  const completeJsWithoutBackup = await fs.readFile(jsPath, 'utf-8');
+  await fs.writeFile(jsPath, completeJsWithoutBackup.slice(0, completeJsWithoutBackup.indexOf('/* End RTL Toggle Button */')));
+  await fs.rm(jsPath + '.bak');
+  await addRtlAuto(ext);
+  const repairedJsWithoutBackup = await fs.readFile(jsPath, 'utf-8');
+  assert.strictEqual((repairedJsWithoutBackup.match(/RTL Toggle Button - Added by script/g) || []).length, 1, 'partial JS tail was retained without a backup');
+  assert.ok(repairedJsWithoutBackup.includes('/* End RTL Toggle Button */'), 'replacement JS block is incomplete');
+
   const completePlanBlocks = await fs.readFile(extensionJsPath, 'utf-8');
   const planJsEnd = completePlanBlocks.indexOf(PLAN_JS_END_MARKER);
   await fs.writeFile(extensionJsPath, completePlanBlocks.slice(0, planJsEnd));
