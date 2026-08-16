@@ -169,7 +169,12 @@ async function getJsMode(jsPath: string | null): Promise<'active' | 'auto' | nul
 /**
  * Strip a marked block from content string.
  */
-function stripBlock(content: string, startMarker: string, endMarker: string): string {
+function stripBlock(
+    content: string,
+    startMarker: string,
+    endMarker: string,
+    truncateIncompleteTail = false,
+): string {
     const startIdx = content.indexOf(startMarker);
     const endIdx = startIdx === -1 ? -1 : content.indexOf(endMarker, startIdx + startMarker.length);
     if (startIdx === -1) return content;
@@ -185,7 +190,9 @@ function stripBlock(content: string, startMarker: string, endMarker: string): st
     // write was torn before the end marker, retaining that tail and appending a
     // fresh block would make the old start pair with the new end and falsely
     // report a healthy installation while leaving broken CSS/JS in place.
-    if (endIdx === -1) return content.substring(0, actualStart);
+    if (endIdx === -1) {
+        return truncateIncompleteTail ? content.substring(0, actualStart) : content;
+    }
 
     const actualEnd = endIdx + endMarker.length;
 
@@ -233,7 +240,7 @@ async function injectFile(
         const preserveBackup = hasBackup && hasManagedBlock;
         const pristine = preserveBackup
             ? existingBackup!
-            : stripBlock(current, startMarker, endMarker);
+            : stripBlock(current, startMarker, endMarker, true);
         if (!preserveBackup) {
             await atomicWrite(backupPath, pristine);
             messages.push(`  ${label}: Backup refreshed: ${backupPath}`);
@@ -314,20 +321,33 @@ async function injectPlanPreview(
         const backupPath = extensionJsPath + '.bak';
 
         const current = await fs.readFile(extensionJsPath, 'utf-8');
-        const hasManagedBlock = current.includes(PLAN_CSS_START_MARKER) || current.includes(PLAN_JS_START_MARKER);
+        const hasAnyManagedBlock =
+            hasManagedBlock(current, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER) ||
+            hasManagedBlock(current, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER);
         const hasBackup = await exists(backupPath);
         const existingBackup = hasBackup ? await fs.readFile(backupPath, 'utf-8') : null;
         const currentIsAmbiguousPrefix = existingBackup !== null &&
             current.length < existingBackup.length && existingBackup.startsWith(current);
-        if (!hasManagedBlock && currentIsAmbiguousPrefix) {
+        if (!hasAnyManagedBlock && currentIsAmbiguousPrefix) {
             messages.push(
                 '  Plan: Aborted — current file is an ambiguous shorter prefix of its backup; ' +
                 'both files were preserved for manual recovery',
             );
             return false;
         }
+        const hasIncompleteEmbeddedBlock =
+            (hasManagedBlock(current, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER) &&
+                !hasCompleteBlock(current, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER)) ||
+            (hasManagedBlock(current, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER) &&
+                !hasCompleteBlock(current, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER));
+        if (!hasBackup && hasIncompleteEmbeddedBlock) {
+            messages.push(
+                '  Plan: Aborted — incomplete embedded Plan block has no recoverable backup; file preserved',
+            );
+            return false;
+        }
         let content: string;
-        if (hasBackup && hasManagedBlock) {
+        if (hasBackup && hasAnyManagedBlock) {
             content = existingBackup!;
             messages.push('  Plan: Preserved existing backup');
         } else {
@@ -339,7 +359,7 @@ async function injectPlanPreview(
 
         const leaveUnsupportedPlanClean = async (message: string): Promise<false> => {
             messages.push(message);
-            if (hasManagedBlock) {
+            if (hasAnyManagedBlock) {
                 await atomicWrite(extensionJsPath, content);
                 messages.push('  Plan: Removed stale Plan injection from unsupported template');
             }
@@ -719,6 +739,7 @@ async function removeInjected(
     label: string,
     extName: string,
     messages: string[],
+    truncateIncompleteTail = true,
 ): Promise<boolean> {
     if (!isInstalled) {
         messages.push(`  ${label}: RTL not installed in ${extName}`);
@@ -733,7 +754,11 @@ async function removeInjected(
     // Fallback: manual marker removal
     try {
         const content = await fs.readFile(filePath, 'utf-8');
-        const cleaned = stripBlock(content, startMarker, endMarker);
+        if (!truncateIncompleteTail && !hasCompleteBlock(content, startMarker, endMarker)) {
+            messages.push(`  ${label}: Aborted — incomplete embedded block has no recoverable backup; file preserved`);
+            return false;
+        }
+        const cleaned = stripBlock(content, startMarker, endMarker, truncateIncompleteTail);
         await atomicWrite(filePath, cleaned);
         messages.push(`  ${label}: RTL removed from ${extName}`);
         return true;
@@ -767,12 +792,22 @@ async function removeRtlImpl(ext: ClaudeExtensionInfo): Promise<InjectionResult>
         if (await restoreAndDeleteBackup(ext.extensionJsPath, 'Plan', messages)) {
             changed = true;
         } else {
-            const cssRemoved = await removeInjected(ext.extensionJsPath, true, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER, 'Plan CSS', ext.name, messages);
-            const jsStillManaged = await hasPlanJsManagedBlock(ext.extensionJsPath);
-            const jsRemoved = jsStillManaged
-                ? await removeInjected(ext.extensionJsPath, true, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER, 'Plan JS', ext.name, messages)
-                : false;
-            if (cssRemoved || jsRemoved) changed = true;
+            const planContent = await fs.readFile(ext.extensionJsPath, 'utf-8').catch(() => '');
+            const hasIncompleteEmbeddedBlock =
+                (hasManagedBlock(planContent, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER) &&
+                    !hasCompleteBlock(planContent, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER)) ||
+                (hasManagedBlock(planContent, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER) &&
+                    !hasCompleteBlock(planContent, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER));
+            if (hasIncompleteEmbeddedBlock) {
+                messages.push('  Plan: Aborted removal — incomplete embedded block has no recoverable backup; file preserved');
+            } else {
+                const cssRemoved = await removeInjected(ext.extensionJsPath, true, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER, 'Plan CSS', ext.name, messages, false);
+                const jsStillManaged = await hasPlanJsManagedBlock(ext.extensionJsPath);
+                const jsRemoved = jsStillManaged
+                    ? await removeInjected(ext.extensionJsPath, true, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER, 'Plan JS', ext.name, messages, false)
+                    : false;
+                if (cssRemoved || jsRemoved) changed = true;
+            }
         }
     }
 

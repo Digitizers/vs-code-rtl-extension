@@ -232,6 +232,24 @@ async function main() {
   assert.strictEqual(unreadableWebviewStatus.mode, 'inactive', 'test setup did not collapse unreadable CSS to inactive');
   assert.ok(!isModeFullyInstalled(unreadableWebviewStatus, 'inactive'), 'unreadable webview bundles were treated as safely inactive');
 
+  // Plan blocks are embedded in the vendor bundle, so a missing end marker
+  // without a backup must fail closed rather than discard the vendor suffix.
+  const partialPlanPath = path.join(extDir, 'partial-plan-extension.js');
+  const partialPlanCssPath = path.join(extDir, 'partial-plan-index.css');
+  await fs.writeFile(partialPlanPath, extJs + 'vendorSuffix();\n');
+  await fs.writeFile(partialPlanCssPath, css);
+  const partialPlanExt = { ...ext, cssPath: partialPlanCssPath, jsPath: null, extensionJsPath: partialPlanPath };
+  await addRtlAuto(partialPlanExt);
+  await fs.rm(partialPlanPath + '.bak');
+  const partialPlanContent = (await fs.readFile(partialPlanPath, 'utf-8')).replace(PLAN_CSS_END_MARKER, '');
+  await fs.writeFile(partialPlanPath, partialPlanContent);
+  const partialRepairResult = await addRtlAuto(partialPlanExt);
+  assert.strictEqual(await fs.readFile(partialPlanPath, 'utf-8'), partialPlanContent, 'partial embedded Plan repair truncated vendor content');
+  assert.ok(partialRepairResult.messages.some((m) => m.includes('incomplete embedded Plan block')), 'partial embedded Plan repair did not fail closed');
+  await removeRtl(partialPlanExt);
+  assert.strictEqual(await fs.readFile(partialPlanPath, 'utf-8'), partialPlanContent, 'partial embedded Plan removal truncated vendor content');
+  assert.ok((await fs.readFile(partialPlanPath, 'utf-8')).includes('vendorSuffix();'), 'partial embedded Plan lost its vendor suffix');
+
   const noReadyPlan = path.join(extDir, 'no-ready-extension.js');
   await fs.writeFile(noReadyPlan, '<style>.p{version:3}</style>\n<div id="content"></div>\n');
   const noReadyExt = { ...ext, extensionJsPath: noReadyPlan };
