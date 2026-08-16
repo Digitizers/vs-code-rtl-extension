@@ -137,7 +137,7 @@ async function main() {
 
   // 6. A clean vendor update in the same directory replaces stale backups instead of
   //    being overwritten by them during reinjection.
-  const updatedJs = '/* updated vendor webview */\n' + 'b'.repeat(1_000_000);
+  const updatedJs = '/* updated vendor webview: שלום */\n' + 'b'.repeat(1_000_000);
   const updatedCss = ':root{--vendor-version:2}\n';
   const updatedExtJs =
     'globalThis.vendorVersion=2;\n<style>.p{version:2}</style>\n<div id="content"></div>\n' +
@@ -152,6 +152,17 @@ async function main() {
   assert.ok((await fs.readFile(extensionJsPath, 'utf-8')).includes('vendorVersion=2'), 'stale Plan backup overwrote vendor update');
   assert.strictEqual(await fs.readFile(jsPath + '.bak', 'utf-8'), updatedJs, 'JS backup was not refreshed');
   assert.strictEqual(await fs.readFile(cssPath + '.bak', 'utf-8'), updatedCss, 'CSS backup was not refreshed');
+
+  const updatedJsBytes = Buffer.from(updatedJs, 'utf-8');
+  const multibyteStart = updatedJsBytes.indexOf(Buffer.from('שלום', 'utf-8'));
+  const tornMultibytePrefix = updatedJsBytes.subarray(0, multibyteStart + 1);
+  await fs.writeFile(jsPath, tornMultibytePrefix);
+  const tornMultibyteResult = await addRtlAuto(ext);
+  assert.ok((await fs.readFile(jsPath)).equals(tornMultibytePrefix), 'multibyte torn prefix was overwritten');
+  assert.strictEqual(await fs.readFile(jsPath + '.bak', 'utf-8'), updatedJs, 'multibyte torn prefix replaced the recovery backup');
+  assert.ok(tornMultibyteResult.messages.some((m) => m.includes('ambiguous shorter prefix')), 'multibyte torn prefix was not detected from raw bytes');
+  await fs.writeFile(jsPath, updatedJs);
+  await addRtlAuto(ext);
 
   const [healthy] = await getStatus([ext]);
   assert.ok(isModeFullyInstalled(healthy, 'auto'), 'complete Auto installation reported unhealthy');

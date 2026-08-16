@@ -221,12 +221,15 @@ async function injectFile(
     try {
         const backupPath = filePath + '.bak';
 
-        const current = await fs.readFile(filePath, 'utf-8');
+        const currentBuffer = await fs.readFile(filePath);
+        const current = currentBuffer.toString('utf-8');
         const hasAnyManagedBlock = hasManagedBlock(current, startMarker, endMarker);
         const hasBackup = await exists(backupPath);
-        const existingBackup = hasBackup ? await fs.readFile(backupPath, 'utf-8') : null;
-        const currentIsAmbiguousPrefix = existingBackup !== null &&
-            current.length < existingBackup.length && existingBackup.startsWith(current);
+        const existingBackupBuffer = hasBackup ? await fs.readFile(backupPath) : null;
+        const existingBackup = existingBackupBuffer?.toString('utf-8') ?? null;
+        const currentIsAmbiguousPrefix = existingBackupBuffer !== null &&
+            currentBuffer.length < existingBackupBuffer.length &&
+            existingBackupBuffer.subarray(0, currentBuffer.length).equals(currentBuffer);
         if (!hasAnyManagedBlock && currentIsAmbiguousPrefix) {
             messages.push(
                 `  ${label}: Aborted — current file is an ambiguous shorter prefix of its backup; ` +
@@ -326,14 +329,17 @@ async function injectPlanPreview(
     try {
         const backupPath = extensionJsPath + '.bak';
 
-        const current = await fs.readFile(extensionJsPath, 'utf-8');
+        const currentBuffer = await fs.readFile(extensionJsPath);
+        const current = currentBuffer.toString('utf-8');
         const hasAnyManagedBlock =
             hasManagedBlock(current, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER) ||
             hasManagedBlock(current, PLAN_JS_START_MARKER, PLAN_JS_END_MARKER);
         const hasBackup = await exists(backupPath);
-        const existingBackup = hasBackup ? await fs.readFile(backupPath, 'utf-8') : null;
-        const currentIsAmbiguousPrefix = existingBackup !== null &&
-            current.length < existingBackup.length && existingBackup.startsWith(current);
+        const existingBackupBuffer = hasBackup ? await fs.readFile(backupPath) : null;
+        const existingBackup = existingBackupBuffer?.toString('utf-8') ?? null;
+        const currentIsAmbiguousPrefix = existingBackupBuffer !== null &&
+            currentBuffer.length < existingBackupBuffer.length &&
+            existingBackupBuffer.subarray(0, currentBuffer.length).equals(currentBuffer);
         if (!hasAnyManagedBlock && currentIsAmbiguousPrefix) {
             messages.push(
                 '  Plan: Aborted — current file is an ambiguous shorter prefix of its backup; ' +
