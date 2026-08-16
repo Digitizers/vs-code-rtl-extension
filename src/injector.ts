@@ -234,6 +234,12 @@ async function injectFile(
             );
             return false;
         }
+        if (!hasBackup && !current.includes(startMarker) && current.includes(endMarker)) {
+            messages.push(
+                `  ${label}: Aborted — orphaned end marker has no recoverable backup; file preserved`,
+            );
+            return false;
+        }
         // If our markers are still present, the current file may be a torn
         // result from an earlier race, so restore only with that positive
         // evidence. Markerless prefixes are ambiguous and fail closed above.

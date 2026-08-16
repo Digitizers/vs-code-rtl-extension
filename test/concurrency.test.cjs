@@ -118,6 +118,16 @@ async function main() {
   assert.ok((await fs.readFile(jsPath, 'utf-8')).includes('claude code webview bundle'), 'orphaned end marker did not restore known-good JS backup');
   assert.strictEqual((await fs.stat(jsPath + '.bak')).size, origJs, 'orphaned end marker replaced JS backup');
 
+  await fs.rm(jsPath + '.bak');
+  const orphanedEndWithoutBackup = '/* front-truncated without backup */\n' + JS_END_MARKER;
+  await fs.writeFile(jsPath, orphanedEndWithoutBackup);
+  const orphanedEndResult = await addRtlAuto(ext);
+  assert.strictEqual(await fs.readFile(jsPath, 'utf-8'), orphanedEndWithoutBackup, 'backup-free orphaned end marker was overwritten');
+  await assert.rejects(fs.access(jsPath + '.bak'), 'backup-free orphaned end marker created a damaged backup');
+  assert.ok(orphanedEndResult.messages.some((m) => m.includes('orphaned end marker')), 'backup-free orphaned end marker did not fail closed');
+  await fs.writeFile(jsPath, bigJs);
+  await addRtlAuto(ext);
+
   const ambiguousPrefix = bigJs.slice(0, 1_000_000);
   await fs.writeFile(jsPath, ambiguousPrefix);
   const ambiguousResult = await addRtlAuto(ext);
