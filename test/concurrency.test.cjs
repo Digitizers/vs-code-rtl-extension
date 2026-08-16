@@ -149,6 +149,16 @@ async function main() {
   assert.ok(!isModeFullyInstalled(wrongInteractiveMode, 'auto'), 'Auto mode accepted Active interactive scripts');
   await addRtlAuto(ext);
 
+  const healthyPlan = await fs.readFile(extensionJsPath, 'utf-8');
+  const truncatedPlan = healthyPlan.slice(0, healthyPlan.indexOf('<div id="content"></div>'));
+  await fs.writeFile(extensionJsPath, truncatedPlan);
+  const [truncatedPlanStatus] = await getStatus([ext]);
+  assert.ok(truncatedPlanStatus.planPreviewInstalled, 'test setup lost Plan markers');
+  assert.strictEqual(truncatedPlanStatus.planPreviewInteractiveSupported, false, 'truncated Plan retained all anchors');
+  assert.ok(!isModeFullyInstalled(truncatedPlanStatus, 'auto'), 'marker-bearing truncated Plan reported healthy');
+  await addRtlAuto(ext);
+  assert.ok((await fs.readFile(extensionJsPath, 'utf-8')).includes('<div id="content"></div>'), 'Plan backup did not repair truncated anchors');
+
   // 7. Older Claude versions without the Plan Preview template remain healthy.
   const unsupportedPlan = path.join(extDir, 'unsupported-extension.js');
   await fs.writeFile(unsupportedPlan, 'module.exports = {};\n');
