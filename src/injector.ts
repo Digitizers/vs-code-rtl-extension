@@ -501,7 +501,7 @@ async function isPlanPreviewInteractiveSupported(extensionJsPath: string | null)
 /** Return whether every component available in this Claude installation is healthy. */
 export function isModeFullyInstalled(status: RtlStatus, expectedMode: RtlMode): boolean {
     if (status.mode !== expectedMode) return false;
-    if (status.planPreviewReadError) return false;
+    if (status.cssReadError || status.jsReadError || status.planPreviewReadError) return false;
     if (expectedMode === 'inactive') {
         return !status.cssManagedBlockPresent && !status.jsManagedBlockPresent &&
             !status.planPreviewCssManagedBlockPresent && !status.planPreviewJsManagedBlockPresent;
@@ -532,9 +532,21 @@ export async function getStatus(extensions: ClaudeExtensionInfo[]): Promise<RtlS
 
     for (const ext of extensions) {
         let cssContent = '';
+        let cssReadError = false;
         try {
             cssContent = await fs.readFile(ext.cssPath, 'utf-8');
-        } catch { /* file unreadable — treat as not installed */ }
+        } catch {
+            cssReadError = true;
+        }
+
+        let jsReadError = false;
+        if (ext.jsPath) {
+            try {
+                await fs.readFile(ext.jsPath, 'utf-8');
+            } catch {
+                jsReadError = true;
+            }
+        }
 
         let planPreviewReadError = false;
         if (ext.extensionJsPath) {
@@ -558,9 +570,11 @@ export async function getStatus(extensions: ClaudeExtensionInfo[]): Promise<RtlS
             extension: ext,
             cssInstalled,
             cssManagedBlockPresent,
+            cssReadError,
             jsInstalled: await isJsInstalled(ext.jsPath),
             jsManagedBlockPresent: await hasJsManagedBlock(ext.jsPath),
             jsMode: await getJsMode(ext.jsPath),
+            jsReadError,
             planPreviewInstalled: await isPlanPreviewInstalled(ext.extensionJsPath),
             planPreviewCssManagedBlockPresent: await hasPlanCssManagedBlock(ext.extensionJsPath),
             planPreviewMode: await getPlanPreviewMode(ext.extensionJsPath),

@@ -221,6 +221,17 @@ async function main() {
   assert.strictEqual(unreadableStatus.planPreviewReadError, true, 'unreadable Plan bundle lost its error state');
   assert.ok(!isModeFullyInstalled(unreadableStatus, 'auto'), 'unreadable Plan bundle was treated as optional');
 
+  const unreadableCss = path.join(extDir, 'unreadable-css-bundle');
+  const unreadableJs = path.join(extDir, 'unreadable-js-bundle');
+  await fs.mkdir(unreadableCss);
+  await fs.mkdir(unreadableJs);
+  const unreadableWebviewExt = { ...ext, cssPath: unreadableCss, jsPath: unreadableJs, extensionJsPath: unsupportedPlan };
+  const [unreadableWebviewStatus] = await getStatus([unreadableWebviewExt]);
+  assert.strictEqual(unreadableWebviewStatus.cssReadError, true, 'unreadable CSS bundle lost its error state');
+  assert.strictEqual(unreadableWebviewStatus.jsReadError, true, 'unreadable JS bundle lost its error state');
+  assert.strictEqual(unreadableWebviewStatus.mode, 'inactive', 'test setup did not collapse unreadable CSS to inactive');
+  assert.ok(!isModeFullyInstalled(unreadableWebviewStatus, 'inactive'), 'unreadable webview bundles were treated as safely inactive');
+
   const noReadyPlan = path.join(extDir, 'no-ready-extension.js');
   await fs.writeFile(noReadyPlan, '<style>.p{version:3}</style>\n<div id="content"></div>\n');
   const noReadyExt = { ...ext, extensionJsPath: noReadyPlan };

@@ -20,9 +20,13 @@ export interface RtlStatus {
     extension: ClaudeExtensionInfo;
     cssInstalled: boolean;
     cssManagedBlockPresent: boolean;
+    /** True when the configured CSS bundle could not be read */
+    cssReadError: boolean;
     jsInstalled: boolean;
     jsManagedBlockPresent: boolean;
     jsMode: 'active' | 'auto' | null;
+    /** True when a configured JS bundle could not be read */
+    jsReadError: boolean;
     planPreviewInstalled: boolean;
     planPreviewCssManagedBlockPresent: boolean;
     planPreviewMode: Exclude<RtlMode, 'inactive'> | null;
