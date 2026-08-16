@@ -17,7 +17,7 @@ const fs = require('fs/promises');
 const path = require('path');
 const os = require('os');
 const assert = require('assert');
-const { addRtlAuto, removeRtl, getStatus, isModeFullyInstalled } = require('../out-test/injector.js');
+const { addRtlAuto, addRtlAlways, removeRtl, getStatus, isModeFullyInstalled } = require('../out-test/injector.js');
 const { PLAN_CSS_START_MARKER, PLAN_JS_START_MARKER, RTL_AUTO_JS_CODE } = require('../out-test/content.js');
 
 async function main() {
@@ -137,7 +137,16 @@ async function main() {
   assert.strictEqual(unsupportedStatus.planPreviewSupported, false, 'unsupported Plan template reported supported');
   assert.ok(isModeFullyInstalled(unsupportedStatus, 'auto'), 'unsupported optional Plan template made Auto unhealthy');
 
-  // 8. removeRtl strips Plan markers even when its backup has gone missing.
+  // 8. Noninteractive modes are unhealthy if restoring the webview JS backup
+  //    fails and leaves an old toggle/observer behind.
+  await fs.rm(jsPath + '.bak');
+  await addRtlAlways(ext);
+  const [incompleteAlways] = await getStatus([ext]);
+  assert.strictEqual(incompleteAlways.mode, 'always', 'Always CSS mode was not installed');
+  assert.ok(incompleteAlways.jsInstalled, 'test setup did not retain interactive JS');
+  assert.ok(!isModeFullyInstalled(incompleteAlways, 'always'), 'Always mode ignored leftover interactive JS');
+
+  // 9. removeRtl strips Plan markers even when its backup has gone missing.
   await fs.rm(extensionJsPath + '.bak');
   await removeRtl(ext);
   const restoredJs = (await fs.stat(jsPath)).size;

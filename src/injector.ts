@@ -441,6 +441,7 @@ export function isModeFullyInstalled(status: RtlStatus, expectedMode: RtlMode): 
 
     const needsInteractiveJs = expectedMode === 'active' || expectedMode === 'auto';
     if (needsInteractiveJs && status.extension.jsPath && !status.jsInstalled) return false;
+    if (!needsInteractiveJs && (status.jsInstalled || status.planPreviewJsInstalled)) return false;
     if (status.planPreviewSupported && !status.planPreviewInstalled) return false;
     if (needsInteractiveJs && status.planPreviewSupported && !status.planPreviewJsInstalled) return false;
     return true;
