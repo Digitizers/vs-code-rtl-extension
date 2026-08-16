@@ -5,11 +5,13 @@ import {
     RTL_JS_CODE,
     RTL_START_MARKER, RTL_END_MARKER,
     JS_START_MARKER, JS_END_MARKER,
+    JS_MODE_ACTIVE_MARKER, JS_MODE_AUTO_MARKER,
     RTL_MODE_ALWAYS_MARKER, RTL_MODE_AUTO_MARKER, RTL_MODE_LTR_MARKER,
     RTL_AUTO_JS_CODE,
     generateActiveCssRules, generateAlwaysCssRules, generateAutoCssRules, generateLtrCssRules,
     PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER,
     PLAN_JS_START_MARKER, PLAN_JS_END_MARKER,
+    PLAN_JS_MODE_ACTIVE_MARKER, PLAN_JS_MODE_AUTO_MARKER,
     generatePlanActiveCss, PLAN_ACTIVE_JS,
     generatePlanAlwaysCss,
     generatePlanAutoCss, PLAN_AUTO_JS,
@@ -166,6 +168,19 @@ async function isJsInstalled(jsPath: string | null): Promise<boolean> {
         return content.includes(JS_START_MARKER);
     } catch {
         return false;
+    }
+}
+
+async function getJsMode(jsPath: string | null): Promise<'active' | 'auto' | null> {
+    if (!jsPath) return null;
+    try {
+        const content = await fs.readFile(jsPath, 'utf-8');
+        if (!content.includes(JS_START_MARKER)) return null;
+        if (content.includes(JS_MODE_AUTO_MARKER)) return 'auto';
+        if (content.includes(JS_MODE_ACTIVE_MARKER)) return 'active';
+        return null;
+    } catch {
+        return null;
     }
 }
 
@@ -400,6 +415,19 @@ async function isPlanPreviewJsInstalled(extensionJsPath: string | null): Promise
     }
 }
 
+async function getPlanPreviewJsMode(extensionJsPath: string | null): Promise<'active' | 'auto' | null> {
+    if (!extensionJsPath) return null;
+    try {
+        const content = await fs.readFile(extensionJsPath, 'utf-8');
+        if (!content.includes(PLAN_JS_START_MARKER)) return null;
+        if (content.includes(PLAN_JS_MODE_AUTO_MARKER)) return 'auto';
+        if (content.includes(PLAN_JS_MODE_ACTIVE_MARKER)) return 'active';
+        return null;
+    } catch {
+        return null;
+    }
+}
+
 async function isPlanPreviewSupported(extensionJsPath: string | null): Promise<boolean> {
     if (!extensionJsPath) return false;
     try {
@@ -419,9 +447,11 @@ export function isModeFullyInstalled(status: RtlStatus, expectedMode: RtlMode): 
 
     const needsInteractiveJs = expectedMode === 'active' || expectedMode === 'auto';
     if (needsInteractiveJs && status.extension.jsPath && !status.jsInstalled) return false;
+    if (needsInteractiveJs && status.extension.jsPath && status.jsMode !== expectedMode) return false;
     if (!needsInteractiveJs && (status.jsInstalled || status.planPreviewJsInstalled)) return false;
     if (status.planPreviewSupported && !status.planPreviewInstalled) return false;
     if (needsInteractiveJs && status.planPreviewSupported && !status.planPreviewJsInstalled) return false;
+    if (needsInteractiveJs && status.planPreviewSupported && status.planPreviewJsMode !== expectedMode) return false;
     return true;
 }
 
@@ -448,8 +478,10 @@ export async function getStatus(extensions: ClaudeExtensionInfo[]): Promise<RtlS
             extension: ext,
             cssInstalled,
             jsInstalled: await isJsInstalled(ext.jsPath),
+            jsMode: await getJsMode(ext.jsPath),
             planPreviewInstalled: await isPlanPreviewInstalled(ext.extensionJsPath),
             planPreviewJsInstalled: await isPlanPreviewJsInstalled(ext.extensionJsPath),
+            planPreviewJsMode: await getPlanPreviewJsMode(ext.extensionJsPath),
             planPreviewSupported: await isPlanPreviewSupported(ext.extensionJsPath),
             cssBackupExists: await exists(ext.cssPath + '.bak'),
             jsBackupExists: ext.jsPath ? await exists(ext.jsPath + '.bak') : false,

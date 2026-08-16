@@ -20,9 +20,11 @@ export interface RtlStatus {
     extension: ClaudeExtensionInfo;
     cssInstalled: boolean;
     jsInstalled: boolean;
+    jsMode: 'active' | 'auto' | null;
     planPreviewInstalled: boolean;
     /** Whether Plan Preview's interactive JS is installed (Active/Auto modes) */
     planPreviewJsInstalled: boolean;
+    planPreviewJsMode: 'active' | 'auto' | null;
     /** Whether this Claude version contains the Plan Preview template we support */
     planPreviewSupported: boolean;
     cssBackupExists: boolean;

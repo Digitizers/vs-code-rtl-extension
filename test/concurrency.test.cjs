@@ -18,7 +18,11 @@ const path = require('path');
 const os = require('os');
 const assert = require('assert');
 const { addRtlAuto, addRtlAlways, removeRtl, getStatus, isModeFullyInstalled } = require('../out-test/injector.js');
-const { PLAN_CSS_START_MARKER, PLAN_JS_START_MARKER, RTL_AUTO_JS_CODE } = require('../out-test/content.js');
+const {
+  PLAN_CSS_START_MARKER, PLAN_JS_START_MARKER, RTL_AUTO_JS_CODE,
+  JS_MODE_ACTIVE_MARKER, JS_MODE_AUTO_MARKER,
+  PLAN_JS_MODE_ACTIVE_MARKER, PLAN_JS_MODE_AUTO_MARKER,
+} = require('../out-test/content.js');
 
 async function main() {
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'ccrtl-race-'));
@@ -127,6 +131,13 @@ async function main() {
   assert.ok(!isModeFullyInstalled({ ...healthy, jsInstalled: false }, 'auto'), 'Auto mode ignored missing webview JS');
   assert.ok(!isModeFullyInstalled({ ...healthy, planPreviewJsInstalled: false }, 'auto'), 'Auto mode ignored missing Plan JS');
   assert.ok(!isModeFullyInstalled({ ...healthy, mode: 'inactive', planPreviewJsInstalled: true }, 'inactive'), 'Inactive mode ignored leftover Plan JS');
+
+  await fs.writeFile(jsPath, (await fs.readFile(jsPath, 'utf-8')).replace(JS_MODE_AUTO_MARKER, JS_MODE_ACTIVE_MARKER));
+  await fs.writeFile(extensionJsPath, (await fs.readFile(extensionJsPath, 'utf-8')).replace(PLAN_JS_MODE_AUTO_MARKER, PLAN_JS_MODE_ACTIVE_MARKER));
+  const [wrongInteractiveMode] = await getStatus([ext]);
+  assert.strictEqual(wrongInteractiveMode.mode, 'auto', 'test setup changed CSS mode');
+  assert.ok(!isModeFullyInstalled(wrongInteractiveMode, 'auto'), 'Auto mode accepted Active interactive scripts');
+  await addRtlAuto(ext);
 
   // 7. Older Claude versions without the Plan Preview template remain healthy.
   const unsupportedPlan = path.join(extDir, 'unsupported-extension.js');

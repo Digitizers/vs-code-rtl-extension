@@ -11,6 +11,8 @@ export const JS_START_MARKER = '/* RTL Toggle Button - Added by script */';
 
 /** Marker at the end of injected JS block */
 export const JS_END_MARKER = '/* End RTL Toggle Button */';
+export const JS_MODE_ACTIVE_MARKER = '/* RTL-JS-MODE: active */';
+export const JS_MODE_AUTO_MARKER = '/* RTL-JS-MODE: auto */';
 
 /** Marker to identify RTL mode inside injected CSS */
 export const RTL_MODE_ACTIVE_MARKER = '/* RTL-MODE: active */';
@@ -560,6 +562,7 @@ export function generateLtrCssRules(fonts: FontOptions = NO_FONTS): string {
 /** RTL JS toggle button code */
 export const RTL_JS_CODE = `
 /* RTL Toggle Button - Added by script */
+${JS_MODE_ACTIVE_MARKER}
 (function() {
     var BTN_ID = 'yby-rtl-btn';
     var WRAP_ID = 'yby-rtl-btn-wrap';
@@ -639,6 +642,8 @@ export const PLAN_CSS_START_MARKER = '/* RTL Plan Preview Start */';
 export const PLAN_CSS_END_MARKER = '/* RTL Plan Preview End */';
 export const PLAN_JS_START_MARKER = '/* RTL Plan Preview JS Start */';
 export const PLAN_JS_END_MARKER = '/* RTL Plan Preview JS End */';
+export const PLAN_JS_MODE_ACTIVE_MARKER = '/* RTL-PLAN-JS-MODE: active */';
+export const PLAN_JS_MODE_AUTO_MARKER = '/* RTL-PLAN-JS-MODE: auto */';
 
 /** Plan Preview button CSS — shared across Active/Auto modes */
 const PLAN_BUTTON_CSS = `
@@ -772,6 +777,7 @@ export function generatePlanAutoCss(fonts: FontOptions = NO_FONTS): string {
 /** Plan Preview JS for Active mode — toggle button */
 export const PLAN_ACTIVE_JS =
     PLAN_JS_START_MARKER + '\n' +
+    PLAN_JS_MODE_ACTIVE_MARKER + '\n' +
     `(function() {
     var btn = document.createElement('button');
     btn.id = 'yby-plan-rtl-btn';
@@ -791,6 +797,7 @@ export const PLAN_ACTIVE_JS =
 /** Plan Preview JS for Auto mode — auto-detect RTL + override button */
 export const PLAN_AUTO_JS =
     PLAN_JS_START_MARKER + '\n' +
+    PLAN_JS_MODE_AUTO_MARKER + '\n' +
     `(function() {
     var RTL_RE = /[\\u0590-\\u05FF\\u0600-\\u06FF\\u0750-\\u077F\\uFB50-\\uFDFF\\uFE70-\\uFEFE]/;
     var content = document.getElementById('content');
@@ -823,6 +830,7 @@ export const PLAN_AUTO_JS =
 /** Auto-mode JS — scans bubbles for Hebrew and adds .YBYrtl class */
 export const RTL_AUTO_JS_CODE = `
 /* RTL Toggle Button - Added by script */
+${JS_MODE_AUTO_MARKER}
 (function() {
     var RTL = /[\\u0590-\\u05FF\\u0600-\\u06FF\\u0750-\\u077F\\uFB50-\\uFDFF\\uFE70-\\uFEFE]/;
     var CLS = 'YBYrtl';
