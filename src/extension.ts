@@ -74,7 +74,7 @@ async function handleMode(
 
     if (anyChanged && incomplete.length === 0) {
         vscode.commands.executeCommand('workbench.action.reloadWindow');
-    } else if (noChangeMessage) {
+    } else if (noChangeMessage && !anyChanged && incomplete.length === 0) {
         vscode.window.showInformationMessage(noChangeMessage);
     }
 }

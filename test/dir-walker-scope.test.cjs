@@ -10,6 +10,7 @@ const path = require('path');
 
 const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'content.ts'), 'utf8');
 const injectorSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'injector.ts'), 'utf8');
+const extensionSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'extension.ts'), 'utf8');
 
 const walker = src.match(/\/\* Per-Block Direction[\s\S]*?\n\}\)\(\);/);
 if (!walker) {
@@ -94,6 +95,9 @@ if (!/process\.kill\(pid, 0\)/.test(injectorSrc)) {
 }
 if (!/fs\.link\(lockPath, claimPath\)/.test(injectorSrc) || !/claimedStat\.ino === currentStat\.ino/.test(injectorSrc)) {
     failures.push('stale-lock reclamation no longer claims and verifies the exact inode');
+}
+if (!/noChangeMessage && !anyChanged && incomplete\.length === 0/.test(extensionSrc)) {
+    failures.push('no-change message is no longer suppressed after an incomplete operation');
 }
 
 if (failures.length) {
