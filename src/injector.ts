@@ -51,6 +51,7 @@ function delay(ms: number): Promise<void> {
  */
 async function withFileLock<T>(lockDir: string, fn: () => Promise<T>): Promise<T> {
     const lockPath = path.join(lockDir, '.ybyrtl.lock');
+    const recoveryPath = path.join(lockDir, '.ybyrtl.recovery.lock');
     const STALE_MS = 30_000;
     const RETRY_MS = 100;
     const MAX_WAIT_MS = 20_000;
@@ -58,8 +59,24 @@ async function withFileLock<T>(lockDir: string, fn: () => Promise<T>): Promise<T
     let handle: fs.FileHandle | undefined;
     const start = Date.now();
     while (true) {
+        // A stale-lock reclaimer temporarily blocks ordinary acquisition. A
+        // winner that raced past this check verifies again after open below.
+        if (await exists(recoveryPath)) {
+            if (Date.now() - start > MAX_WAIT_MS) {
+                throw new Error(`Timed out waiting for RTL recovery lock: ${recoveryPath}`);
+            }
+            await delay(RETRY_MS);
+            continue;
+        }
         try {
             handle = await fs.open(lockPath, 'wx'); // exclusive create — fails if held
+            if (await exists(recoveryPath)) {
+                await handle.close();
+                handle = undefined;
+                await fs.rm(lockPath, { force: true });
+                await delay(RETRY_MS);
+                continue;
+            }
             await handle.writeFile(String(process.pid));
             break;
         } catch (e) {
@@ -79,8 +96,39 @@ async function withFileLock<T>(lockDir: string, fn: () => Promise<T>): Promise<T
                     }
                 }
                 if (Date.now() - st.mtimeMs > STALE_MS && !ownerAlive) {
-                    await fs.rm(lockPath, { force: true });
-                    continue; // retry immediately after breaking a stale lock
+                    let recoveryHandle: fs.FileHandle | undefined;
+                    try {
+                        recoveryHandle = await fs.open(recoveryPath, 'wx');
+                        await recoveryHandle.writeFile(String(process.pid));
+
+                        // Re-read while owning the recovery lock. Another
+                        // reclaimer may already have replaced the stale lock.
+                        const latestStat = await fs.stat(lockPath);
+                        const latestPidText = await fs.readFile(lockPath, 'utf-8').catch(() => '');
+                        const latestPid = Number.parseInt(latestPidText, 10);
+                        let latestOwnerAlive = Number.isInteger(latestPid) && latestPid > 0;
+                        if (latestOwnerAlive) {
+                            try {
+                                process.kill(latestPid, 0);
+                            } catch (latestOwnerError) {
+                                latestOwnerAlive = (latestOwnerError as NodeJS.ErrnoException).code === 'EPERM';
+                            }
+                        }
+                        if (Date.now() - latestStat.mtimeMs > STALE_MS && !latestOwnerAlive) {
+                            await fs.rm(lockPath, { force: true });
+                        }
+                    } catch (recoveryError) {
+                        if ((recoveryError as NodeJS.ErrnoException).code !== 'EEXIST' &&
+                            (recoveryError as NodeJS.ErrnoException).code !== 'ENOENT') {
+                            throw recoveryError;
+                        }
+                    } finally {
+                        if (recoveryHandle) {
+                            await recoveryHandle.close().catch(() => { /* ignore */ });
+                            await fs.rm(recoveryPath, { force: true }).catch(() => { /* ignore */ });
+                        }
+                    }
+                    continue;
                 }
             } catch {
                 continue; // lock vanished between open and stat — retry

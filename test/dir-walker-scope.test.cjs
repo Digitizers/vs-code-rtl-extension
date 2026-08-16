@@ -92,6 +92,9 @@ if (!/Timed out waiting for RTL file lock/.test(injectorSrc)) {
 if (!/process\.kill\(pid, 0\)/.test(injectorSrc)) {
     failures.push('stale-lock cleanup no longer checks whether the owner process is alive');
 }
+if (!/\.ybyrtl\.recovery\.lock/.test(injectorSrc)) {
+    failures.push('stale-lock reclamation is no longer serialized by a recovery lock');
+}
 
 if (failures.length) {
     console.error('FAIL — dir-walker scope regression:');

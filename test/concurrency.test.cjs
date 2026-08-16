@@ -54,6 +54,13 @@ async function main() {
     name: 'anthropic.claude-code-9.9.9-test',
   };
 
+  // Seed a stale lock and make several windows race to reclaim it. Reclamation
+  // must be serialized so no process can unlink another process's fresh lock.
+  const staleLock = path.join(extDir, '.ybyrtl.lock');
+  await fs.writeFile(staleLock, '999999999');
+  const staleTime = new Date(Date.now() - 60_000);
+  await fs.utimes(staleLock, staleTime, staleTime);
+
   // Simulate N IDE windows patching the SAME files at once.
   const WINDOWS = 8;
   await Promise.all(Array.from({ length: WINDOWS }, () => addRtlAuto(ext)));
@@ -82,7 +89,7 @@ async function main() {
   // 4. No lock / temp litter left behind.
   const leftovers = (await fs.readdir(extDir))
     .concat(await fs.readdir(webview))
-    .filter((f) => f.includes('.ybyrtl.lock') || f.includes('.ybytmp'));
+    .filter((f) => f.includes('.ybyrtl.lock') || f.includes('.ybyrtl.recovery.lock') || f.includes('.ybytmp'));
   assert.strictEqual(leftovers.length, 0, `leftover lock/tmp files: ${leftovers}`);
 
   // 5. If an injected file is truncated, its known-good backup wins instead of
