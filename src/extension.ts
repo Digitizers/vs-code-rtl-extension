@@ -68,7 +68,7 @@ async function handleMode(
     const statuses = await getStatus(extensions);
     const incomplete = statuses.filter(s => !isModeFullyInstalled(s, mode));
     if (incomplete.length > 0) {
-        await updateStatusBar();
+        await updateStatusBar(mode);
         const names = incomplete.map(s => s.extension.name).join(', ');
         vscode.window.showWarningMessage(`Claude RTL: ${label} was incomplete for: ${names}. Check the output for details.`);
     }
@@ -109,7 +109,7 @@ async function handleStatus(): Promise<void> {
     }
 
     channel.show(true);
-    await updateStatusBar();
+    await updateStatusBar(getSavedMode());
 }
 
 interface MenuAction extends vscode.QuickPickItem {
@@ -304,7 +304,7 @@ export function activate(context: vscode.ExtensionContext): void {
     );
 
     autoReactivate().catch(err => console.error('RTL auto-reactivation failed:', err));
-    updateStatusBar().catch(err => console.error('RTL status bar update failed:', err));
+    updateStatusBar(getSavedMode()).catch(err => console.error('RTL status bar update failed:', err));
 }
 
 export function deactivate(): void {

@@ -96,8 +96,12 @@ if (!/remove this lock manually/.test(injectorSrc) || /fs\.link\(lockPath/.test(
 if (!/noChangeMessage && !anyChanged && incomplete\.length === 0/.test(extensionSrc)) {
     failures.push('no-change message is no longer suppressed after an incomplete operation');
 }
-if (!/if \(incomplete\.length > 0\) \{\s*await updateStatusBar\(\);/.test(extensionSrc)) {
+if (!/if \(incomplete\.length > 0\) \{\s*await updateStatusBar\(mode\);/.test(extensionSrc)) {
     failures.push('status bar is no longer refreshed immediately after incomplete operations');
+}
+const statusBarSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'statusBar.ts'), 'utf8');
+if (!/isModeFullyInstalled\(s, expectedMode\)/.test(statusBarSrc)) {
+    failures.push('status bar health is no longer checked against the requested/saved mode');
 }
 
 if (failures.length) {

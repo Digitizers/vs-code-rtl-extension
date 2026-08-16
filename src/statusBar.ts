@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { findClaudeExtensions } from './finder.js';
 import { getStatus, isModeFullyInstalled } from './injector.js';
+import { RtlMode } from './types.js';
 
 let statusBarItem: vscode.StatusBarItem;
 
@@ -14,7 +15,7 @@ export function createStatusBarItem(): vscode.StatusBarItem {
     return statusBarItem;
 }
 
-export async function updateStatusBar(): Promise<void> {
+export async function updateStatusBar(expectedMode: RtlMode): Promise<void> {
     if (!statusBarItem) return;
 
     const extensions = await findClaudeExtensions();
@@ -26,7 +27,7 @@ export async function updateStatusBar(): Promise<void> {
     }
 
     const statuses = await getStatus(extensions);
-    const incomplete = statuses.some(s => !isModeFullyInstalled(s, s.mode));
+    const incomplete = statuses.some(s => !isModeFullyInstalled(s, expectedMode));
     const autoMode = statuses.some(s => s.mode === 'auto');
     const ltrMode = statuses.some(s => s.mode === 'ltr');
     const alwaysMode = statuses.some(s => s.mode === 'always');
