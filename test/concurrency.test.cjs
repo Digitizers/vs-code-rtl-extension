@@ -148,6 +148,16 @@ async function main() {
   assert.strictEqual(unsupportedStatus.planPreviewSupported, false, 'unsupported Plan template reported supported');
   assert.ok(isModeFullyInstalled(unsupportedStatus, 'auto'), 'unsupported optional Plan template made Auto unhealthy');
 
+  const noReadyPlan = path.join(extDir, 'no-ready-extension.js');
+  await fs.writeFile(noReadyPlan, '<style>.p{version:3}</style>\n<div id="content"></div>\n');
+  const noReadyExt = { ...ext, extensionJsPath: noReadyPlan };
+  await addRtlAuto(noReadyExt);
+  const [noReadyStatus] = await getStatus([noReadyExt]);
+  assert.strictEqual(noReadyStatus.planPreviewSupported, true, 'static Plan injection points should be supported');
+  assert.strictEqual(noReadyStatus.planPreviewInteractiveSupported, false, 'missing ready hook reported interactive support');
+  assert.ok(!noReadyStatus.planPreviewInstalled, 'partial Plan CSS was injected without its required JS hook');
+  assert.ok(isModeFullyInstalled(noReadyStatus, 'auto'), 'unsupported interactive Plan template made Auto unhealthy');
+
   // 8. Noninteractive modes are unhealthy if restoring the webview JS backup
   //    fails and leaves an old toggle/observer behind.
   await fs.rm(jsPath + '.bak');

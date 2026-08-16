@@ -349,6 +349,13 @@ async function injectPlanPreview(
             return false;
         }
 
+        const readyMsg = "vscode.postMessage({ type: 'ready' })";
+        const readyIdx = jsContent ? content.indexOf(readyMsg, anchorIdx) : -1;
+        if (jsContent && readyIdx === -1) {
+            messages.push('  Plan: Could not locate JS injection point in Plan Preview template');
+            return false;
+        }
+
         // Inject CSS before </style>
         content = content.substring(0, styleEndIdx) +
             '\n' + cssContent + '\n' +
@@ -358,16 +365,11 @@ async function injectPlanPreview(
         if (jsContent) {
             // Re-find the anchor (position shifted after CSS injection)
             const newAnchorIdx = content.indexOf(PLAN_TEMPLATE_ANCHOR);
-            const readyMsg = "vscode.postMessage({ type: 'ready' })";
-            const readyIdx = content.indexOf(readyMsg, newAnchorIdx);
-            if (readyIdx === -1) {
-                messages.push('  Plan: Could not locate JS injection point in Plan Preview template');
-            } else {
-                content = content.substring(0, readyIdx) +
-                    jsContent + '\n      ' +
-                    content.substring(readyIdx);
-                messages.push('  Plan: RTL JS injected into Plan Preview');
-            }
+            const shiftedReadyIdx = content.indexOf(readyMsg, newAnchorIdx);
+            content = content.substring(0, shiftedReadyIdx) +
+                jsContent + '\n      ' +
+                content.substring(shiftedReadyIdx);
+            messages.push('  Plan: RTL JS injected into Plan Preview');
         }
 
         // Corruption guard: Plan Preview injection only inserts content, so the
@@ -432,7 +434,21 @@ async function isPlanPreviewSupported(extensionJsPath: string | null): Promise<b
     if (!extensionJsPath) return false;
     try {
         const content = await fs.readFile(extensionJsPath, 'utf-8');
-        return content.includes(PLAN_TEMPLATE_ANCHOR);
+        const anchorIdx = content.indexOf(PLAN_TEMPLATE_ANCHOR);
+        return anchorIdx !== -1 && content.lastIndexOf('</style>', anchorIdx) !== -1;
+    } catch {
+        return false;
+    }
+}
+
+async function isPlanPreviewInteractiveSupported(extensionJsPath: string | null): Promise<boolean> {
+    if (!extensionJsPath) return false;
+    try {
+        const content = await fs.readFile(extensionJsPath, 'utf-8');
+        const anchorIdx = content.indexOf(PLAN_TEMPLATE_ANCHOR);
+        return anchorIdx !== -1 &&
+            content.lastIndexOf('</style>', anchorIdx) !== -1 &&
+            content.indexOf("vscode.postMessage({ type: 'ready' })", anchorIdx) !== -1;
     } catch {
         return false;
     }
@@ -449,9 +465,12 @@ export function isModeFullyInstalled(status: RtlStatus, expectedMode: RtlMode): 
     if (needsInteractiveJs && status.extension.jsPath && !status.jsInstalled) return false;
     if (needsInteractiveJs && status.extension.jsPath && status.jsMode !== expectedMode) return false;
     if (!needsInteractiveJs && (status.jsInstalled || status.planPreviewJsInstalled)) return false;
-    if (status.planPreviewSupported && !status.planPreviewInstalled) return false;
-    if (needsInteractiveJs && status.planPreviewSupported && !status.planPreviewJsInstalled) return false;
-    if (needsInteractiveJs && status.planPreviewSupported && status.planPreviewJsMode !== expectedMode) return false;
+    const planSupported = needsInteractiveJs
+        ? status.planPreviewInteractiveSupported
+        : status.planPreviewSupported;
+    if (planSupported && !status.planPreviewInstalled) return false;
+    if (needsInteractiveJs && planSupported && !status.planPreviewJsInstalled) return false;
+    if (needsInteractiveJs && planSupported && status.planPreviewJsMode !== expectedMode) return false;
     return true;
 }
 
@@ -483,6 +502,7 @@ export async function getStatus(extensions: ClaudeExtensionInfo[]): Promise<RtlS
             planPreviewJsInstalled: await isPlanPreviewJsInstalled(ext.extensionJsPath),
             planPreviewJsMode: await getPlanPreviewJsMode(ext.extensionJsPath),
             planPreviewSupported: await isPlanPreviewSupported(ext.extensionJsPath),
+            planPreviewInteractiveSupported: await isPlanPreviewInteractiveSupported(ext.extensionJsPath),
             cssBackupExists: await exists(ext.cssPath + '.bak'),
             jsBackupExists: ext.jsPath ? await exists(ext.jsPath + '.bak') : false,
             mode: autoMode ? 'auto' : ltrMode ? 'ltr' : alwaysMode ? 'always' : cssInstalled ? 'active' : 'inactive',
