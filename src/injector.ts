@@ -187,13 +187,17 @@ async function injectFile(
         const current = await fs.readFile(filePath, 'utf-8');
         const hasManagedBlock = current.includes(startMarker);
         const hasBackup = await exists(backupPath);
+        const existingBackup = hasBackup ? await fs.readFile(backupPath, 'utf-8') : null;
+        const currentIsTruncatedBackup = existingBackup !== null &&
+            current.length < existingBackup.length && existingBackup.startsWith(current);
         // If our markers are still present, the current file may be a torn
-        // result from an earlier race. Preserve and use the known-good backup.
-        // A clean vendor replacement has no markers and safely refreshes it.
-        const pristine = hasManagedBlock && hasBackup
-            ? await fs.readFile(backupPath, 'utf-8')
+        // result from an earlier race. A torn append may also lose the markers
+        // entirely, so a smaller current file never replaces a larger backup.
+        const preserveBackup = hasBackup && (hasManagedBlock || currentIsTruncatedBackup);
+        const pristine = preserveBackup
+            ? existingBackup!
             : stripBlock(current, startMarker, endMarker);
-        if (!hasManagedBlock || !hasBackup) {
+        if (!preserveBackup) {
             await atomicWrite(backupPath, pristine);
             messages.push(`  ${label}: Backup refreshed: ${backupPath}`);
         } else {
@@ -275,9 +279,12 @@ async function injectPlanPreview(
         const current = await fs.readFile(extensionJsPath, 'utf-8');
         const hasManagedBlock = current.includes(PLAN_CSS_START_MARKER) || current.includes(PLAN_JS_START_MARKER);
         const hasBackup = await exists(backupPath);
+        const existingBackup = hasBackup ? await fs.readFile(backupPath, 'utf-8') : null;
+        const currentIsTruncatedBackup = existingBackup !== null &&
+            current.length < existingBackup.length && existingBackup.startsWith(current);
         let content: string;
-        if (hasManagedBlock && hasBackup) {
-            content = await fs.readFile(backupPath, 'utf-8');
+        if (hasBackup && (hasManagedBlock || currentIsTruncatedBackup)) {
+            content = existingBackup!;
             messages.push('  Plan: Preserved existing backup');
         } else {
             content = stripBlock(current, PLAN_CSS_START_MARKER, PLAN_CSS_END_MARKER);
